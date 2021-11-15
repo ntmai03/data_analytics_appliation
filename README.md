@@ -22,7 +22,7 @@ The `.gitignore` file of this repository has been configured to avoid tracking t
 * All files in the `data` folder (you can use this folder to stored temporary files for your experiments).
 
 
-## Managing the Development Environment
+### 1. Managing the Development Environment
 
 To initialise the development environment, run the following `conda` command at the project's root directory:
 
@@ -43,18 +43,8 @@ Or simply, rebuild the environment from scratch:
 conda env create --prefix ./.conda-env --file environment.yml --force
 ```
 
-## Streamlit
-pip install streamlit
-streamlit hello
 
-Fixing error in Streamlit:
-- https://discuss.streamlit.io/t/toml-docoder-error/1400/39
-- In windows, go to the C:/Windows/Users/%profile name%/.streamlit, delete the toml files and restart streamlit run app.py
-- For those who fail the deployment on Heroku. You might found several tutorials suggesting the setup.sh, but please have a look when you copy-paste the code. I deploy the website without deleting the config.toml file. 
-
-
-
-Project Organization
+### 2. Project Organization
 ------------
 
     ├── LICENSE
@@ -104,5 +94,22 @@ Project Organization
 
 
 --------
+
+
+### 3. Streamlit
+pip install streamlit
+streamlit hello
+
+Fixing error in Streamlit:
+- https://discuss.streamlit.io/t/toml-docoder-error/1400/39
+- In windows, go to the C:/Windows/Users/%profile name%/.streamlit, delete the toml files and restart streamlit run app.py
+- For those who fail the deployment on Heroku. You might found several tutorials suggesting the setup.sh, but please have a look when you copy-paste the code. I deploy the website without deleting the config.toml file. 
+
+1. Create file multiplage.py
+2. Create folder page
+3. Create analysis app files in page folder
+4. Import analysis app files in file app.py
+
+
 
 <p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
