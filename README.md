@@ -110,6 +110,9 @@ Fixing error in Streamlit:
 3. Create analysis app files in page folder
 4. Import analysis app files in file app.py
 
+### 4. Config
+1. file config.yml
+
 
 
 <p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
