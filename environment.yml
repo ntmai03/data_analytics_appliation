@@ -1,0 +1,30 @@
+name: da-env
+
+dependencies:
+  - python=3.8
+  - pip
+  - ipython
+  - jupyter
+  
+  # For accessing files in AWS S3 buckets
+  - s3fs 
+ 
+  # For packaging
+  - wheel
+
+  # For visualisation
+  - matplotlib
+  - seaborn
+
+  # For model construction
+  - numpy
+  - pandas
+  - scipy
+  - scikit-learn
+  - requests
+  - flask
+
+  - pip:
+    - watermark
+    - pytest
+    - python-dotenv
