@@ -11,6 +11,7 @@ SRC_PATH = os.path.join(PROJECT_ROOT, 'src')
 TRAINED_MODEL_PATH = os.path.join(PROJECT_ROOT, 'model')
 DATA_PATH = os.path.join(PROJECT_ROOT, 'data')
 DATA_RAW_PATH = os.path.join(DATA_PATH, 'raw')
+PIPELINE_PATH = os.path.join(SRC_PATH, 'pipeline')
 
 def test_funct():
 	st.write('test')
