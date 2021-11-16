@@ -23,10 +23,17 @@ def app():
 	st.sidebar.header('')
 
 	if task_option == 'Introduction':
+		# get data from s3
+		df = dm.s3_load_csv(cf.S3_DATA_PATH, "kc_house_data.csv")
+		st.write("#### First 100 rows")
+		st.write(df.head(100))
+
+		'''
 		data_file = os.path.join(cf.DATA_RAW_PATH, "kc_house_data.csv")
 		df = dm.load_csv_data(data_file)
 		st.write("#### First 100 rows")
 		st.write(df.head(100))
+		'''
 
 
 	if task_option == 'Prediction':
