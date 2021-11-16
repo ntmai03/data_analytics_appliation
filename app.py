@@ -7,6 +7,7 @@ import numpy as np
 from multipage import MultiPage
 from page import introduction
 from page import houseprice_analysis
+from page import diabetes_analysis
 
 
 # Config layout
@@ -23,6 +24,7 @@ app = MultiPage()
 # Add all applications here
 app.add_page("Select Application", introduction.app)
 app.add_page("01-House Price Analysis", houseprice_analysis.app)
+app.add_page("02-Diabetes Analysis", diabetes_analysis.app)
 
 # The main app
 app.run()
