@@ -1,6 +1,7 @@
 import sys
 import os
 from pathlib import Path
+import boto3
 
 import pandas as pd
 # split data
@@ -15,6 +16,25 @@ def load_csv_data(path):
     file_path = os.path.join(path)
 
     return pd.read_csv(file_path)
+
+
+def s3_list_bucket():
+    # Fetch the list of existing buckets
+    clientResponse = cf.S3_CLIENT.list_buckets()
+
+    print('Printing bucket names...')
+    for bucket in clientResponse['Buckets']:
+        print(f'Bucket Name: {bucket["Name"]}')
+
+
+def s3_load_csv(bucket, filename):
+    # Create the S3 object
+    obj = cf.S3_CLIENT.get_object(
+        Bucket = bucket,
+        Key = filename
+    )   
+    # Read data from the S3 object
+    return pd.read_csv(obj['Body'])
 
 
 def split_data(X, y, test_size=0.2, random_state=0):
