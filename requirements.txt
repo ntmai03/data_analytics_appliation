@@ -11,3 +11,7 @@ plotly
 
 # for timeseries data analysis
 yfinance
+
+# for nlp
+bs4
+selectorlib

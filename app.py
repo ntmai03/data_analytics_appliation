@@ -9,7 +9,7 @@ from page import introduction
 from page import houseprice_analysis
 from page import diabetes_analysis
 from page import time_series
-
+from page import travel_recommendation
 
 # Config layout
 st.set_page_config(layout="wide", initial_sidebar_state="expanded")
@@ -46,6 +46,8 @@ app.add_page("Select Application", introduction.app)
 app.add_page("01-House Price Analysis", houseprice_analysis.app)
 app.add_page("02-Diabetes Analysis", diabetes_analysis.app)
 app.add_page("03-Time Series Analysis", time_series.app)
+#app.add_page("04-Text Analysis", time_series.app)
+app.add_page("05-Travel Recommendation", travel_recommendation.app)
 
 # The main app
 app.run()
