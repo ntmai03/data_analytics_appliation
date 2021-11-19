@@ -15,6 +15,9 @@ from util.booking_scrapper import BookingScrapper
 
 def app():
 
+    st.sidebar.header('')
+    st.sidebar.header('')
+    st.sidebar.header('')
     st.sidebar.subheader('Select function')
     task_type = ["Extract Data", 
                  "Reference",

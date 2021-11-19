@@ -6,9 +6,6 @@ from pipeline.stock import Stock
 
 
 def app():
-	title = '<p style="font-family:sans-serif; color:Pink; font-size: 30px;"> Stock Forecast Dashboard</p>'
-	st.markdown(title, unsafe_allow_html=True)
-
 	#------------------------------- Layout setting--------------------------------
 	window_selection_c = st.sidebar.container()  # create an empty container in the sidebar
 	window_selection_c.markdown("## Filter")  # add a title to the sidebar container
