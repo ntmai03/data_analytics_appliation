@@ -18,8 +18,8 @@ PIPELINE_PATH = os.path.join(SRC_PATH, 'pipeline')
 
 S3_CLIENT = boto3.client(
     's3',
-    aws_access_key_id = 'AKIAZFGIKEZ3JECBN5MV',
-    aws_secret_access_key = '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',
+    aws_access_key_id = st.secrets["aws_access_key_id"],
+    aws_secret_access_key = st.secrets["aws_secret_access_key"],
     region_name = 'us-east-2'
 )
 S3_DATA_PATH = 'datool-data'
