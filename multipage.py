@@ -9,9 +9,10 @@ import streamlit as st
 # Define the multiplage class to manage the multiple apps 
 class MultiPage:
 
-	def __init__(self) -> None:
+	def __init__(self, col) -> None:
 		# Constructor class to generate a list which stores all applications as an instance variable
 		self.pages = []
+		self.col = col
 
 	def add_page(self, title, func) -> None:
 		""" Class Method to add pages to the project
@@ -32,12 +33,26 @@ class MultiPage:
 	def run(self):
 
 		# Add dropdown to select the page to run
-		st.sidebar.header('Applications')
+		#st.sidebar.header('Applications')
 		page = st.sidebar.selectbox(
 			'',
 			self.pages,
 			format_func=lambda page: page['title'])
 
 		# run the app function
+		if(page['title'] == 'Select Application'):
+			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Introduction</p>'
+		if(page['title'] == '01-House Price Data Analysis'):
+			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Regression Analysis</p>'
+		if(page['title'] == '02-Diabetes Data Analysis'):
+			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Classification Analysis</p>'
+		if(page['title'] == '03-Time Series Data Analysis'):
+			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Stock Forecast Dashboard</p>'
+		if(page['title'] == '04-Text Data Analysis'):
+			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Natural Language Processing</p>'
+		if(page['title'] == '05-Travel Recommendation'):
+			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Recommender System</p>'
+
+		self.col.markdown(title, unsafe_allow_html=True)
 		page['function']()
 
