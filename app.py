@@ -19,7 +19,7 @@ display = np.array(display)
 #st.image(display)
 
 
-col1, col2, col3 = st.columns([1.5,6,1.5])
+col1, col2, col3 = st.columns([2,5,2])
 
 with col1:
 	st.write("")
@@ -39,18 +39,25 @@ with col3:
 #col2.header('Data Analytics Application')
 
 # Create an instance of the app
-app = MultiPage()
+app = MultiPage(col1)
 
 # Add all applications here
 app.add_page("Select Application", introduction.app)
-app.add_page("01-House Price Analysis", houseprice_analysis.app)
-app.add_page("02-Diabetes Analysis", diabetes_analysis.app)
-app.add_page("03-Time Series Analysis", time_series.app)
-#app.add_page("04-Text Analysis", time_series.app)
+app.add_page("01-House Price Data Analysis", houseprice_analysis.app)
+app.add_page("02-Diabetes Data Analysis", diabetes_analysis.app)
+app.add_page("03-Time Series Data Analysis", time_series.app)
+app.add_page("04-Text Data Analysis", introduction.app)
 app.add_page("05-Travel Recommendation", travel_recommendation.app)
+app.add_page("06-Online Shopping Recommendation", introduction.app)
+app.add_page("07-Dashboard", introduction.app)
+app.add_page("08-Unsupervised Analysis", introduction.app)
+app.add_page("09-Financial Data Analysis", introduction.app)
+app.add_page("10-Graph Analysis", introduction.app)
 
 # The main app
 app.run()
+
+
 
 
 
