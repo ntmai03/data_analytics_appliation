@@ -24,7 +24,7 @@ S3_CLIENT = boto3.client(
 )
 S3_DATA_PATH = 'datool-data'
 S3_DATA_RAW_PATH = 'raw/'
-
+S3_DATA_BOOKING = 'booking/'
 
 
 def test_funct():
