@@ -7,3 +7,7 @@ matplotlib
 seaborn
 xgboost
 boto3
+plotly
+
+# for timeseries data analysis
+yfinance
