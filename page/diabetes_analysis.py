@@ -24,7 +24,7 @@ def app():
 
 	if task_option == 'Introduction':
 		# get data from s3
-		df = dm.s3_load_csv(cf.S3_DATA_PATH, "diabetes.csv")
+		df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_RAW_PATH + "diabetes.csv")
 		st.write("#### First 100 rows")
 		st.write(df.head(100))
 
