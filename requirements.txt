@@ -15,3 +15,6 @@ yfinance
 # for nlp
 bs4
 selectorlib
+
+# for predictive models
+statsmodels

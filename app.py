@@ -10,6 +10,7 @@ from page import houseprice_analysis
 from page import diabetes_analysis
 from page import time_series
 from page import travel_recommendation
+from page import unsupervised_techniques
 
 # Config layout
 st.set_page_config(layout="wide", initial_sidebar_state="expanded")
@@ -45,12 +46,12 @@ app = MultiPage(col1)
 app.add_page("Select Application", introduction.app)
 app.add_page("01-House Price Data Analysis", houseprice_analysis.app)
 app.add_page("02-Diabetes Data Analysis", diabetes_analysis.app)
-app.add_page("03-Time Series Data Analysis", time_series.app)
-app.add_page("04-Text Data Analysis", introduction.app)
-app.add_page("05-Travel Recommendation", travel_recommendation.app)
-app.add_page("06-Online Shopping Recommendation", introduction.app)
-app.add_page("07-Dashboard", introduction.app)
-app.add_page("08-Unsupervised Analysis", introduction.app)
+app.add_page("03-Unsupervised Techniques", unsupervised_techniques.app)
+app.add_page("04-Time Series Data Analysis", time_series.app)
+app.add_page("05-Text Data Analysis", introduction.app)
+app.add_page("06-Travel Recommendation", travel_recommendation.app)
+app.add_page("07-Online Shopping Recommendation", introduction.app)
+app.add_page("08-Dashboard", introduction.app)
 app.add_page("09-Financial Data Analysis", introduction.app)
 app.add_page("10-Graph Analysis", introduction.app)
 

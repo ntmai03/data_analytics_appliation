@@ -46,11 +46,13 @@ class MultiPage:
 			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Regression Analysis</p>'
 		if(page['title'] == '02-Diabetes Data Analysis'):
 			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Classification Analysis</p>'
-		if(page['title'] == '03-Time Series Data Analysis'):
+		if(page['title'] == '03-Unsupervised Techniques'):
+			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Stock 03-Unsupervised Analysis</p>'
+		if(page['title'] == '04-Time Series Data Analysis'):
 			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Stock Forecast Dashboard</p>'
-		if(page['title'] == '04-Text Data Analysis'):
+		if(page['title'] == '05-Text Data Analysis'):
 			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Natural Language Processing</p>'
-		if(page['title'] == '05-Travel Recommendation'):
+		if(page['title'] == '06-Travel Recommendation'):
 			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Recommender System</p>'
 
 		self.col.markdown(title, unsafe_allow_html=True)
