@@ -15,6 +15,7 @@ TRAINED_MODEL_PATH = os.path.join(PROJECT_ROOT, 'model')
 DATA_PATH = os.path.join(PROJECT_ROOT, 'data')
 DATA_RAW_PATH = os.path.join(DATA_PATH, 'raw')
 PIPELINE_PATH = os.path.join(SRC_PATH, 'pipeline')
+ANALYSIS_PATH = os.path.join(SRC_PATH, 'analysis')
 
 S3_CLIENT = boto3.client(
     's3',
