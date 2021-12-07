@@ -11,10 +11,12 @@ from src import config as cf
 from src.util import data_manager as dm
 from src.data_processing import kchouse_feature_engineering as fe
 from pipeline.kchouse_pipeline import *
+from analysis.house_price import HousePrice
 
 def app():
 	st.sidebar.subheader('Select function')
 	task_type = ['Introduction',
+				 'Data Snapshot',
 				 'Exploratory Data Analysis',
 				 'Data Processing',
 				 'Predictive Model',
@@ -23,17 +25,62 @@ def app():
 	st.sidebar.header('')
 
 	if task_option == 'Introduction':
-		# get data from s3
-		df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_RAW_PATH + "kc_house_data.csv")
-		st.write("#### First 100 rows")
-		st.write(df.head(100))
+		# https://docs.streamlit.io/library/get-started/create-an-app
+		st.write('Introduction')	
+		cat = ["bored", "happy", "bored", "bored", "happy", "bored"]
+		dog = ["happy", "happy", "happy", "happy", "bored", "bored"]
+		activity = ["combing", "drinking", "feeding", "napping", "playing", "washing"]
 
-		'''
-		data_file = os.path.join(cf.DATA_RAW_PATH, "kc_house_data.csv")
-		df = dm.load_csv_data(data_file)
-		st.write("#### First 100 rows")
-		st.write(df.head(100))
-		'''
+		width = st.sidebar.slider("plot width", 1, 25, 3)
+		height = st.sidebar.slider("plot height", 1, 25, 1)
+
+		fig, ax = plt.subplots(figsize=(width, height))
+		ax.plot(activity, dog, label="dog")
+		ax.plot(activity, cat, label="cat")
+		ax.legend()
+
+		st.pyplot(fig)
+
+	if task_option == 'Data Snapshot':
+		# get data from s3
+		houseprice = HousePrice()
+		houseprice.prepare_dataset()
+		st.write("#### First 10 rows")
+		#df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_RAW_PATH + "kc_house_data.csv")
+		st.write(houseprice.data[houseprice.SELECTED_VARS].head(10))
+		st.write(houseprice.data_processing_pipeline(houseprice.X_train, 1).head(10))
+
+		houseprice.processed_X_train = houseprice.data_processing_pipeline(houseprice.X_train, 1)
+		# calculate the correlations using pandas corr and round the values to 2 decimals
+		corr_mat = houseprice.processed_X_train[['view','grade','lat','long']].corr().round(2)
+		# plot the correlation matrix using seaorn annot=True to print the correlation values inside the squares
+
+		fig, ax = plt.subplots(figsize=(1, 1))
+		sns.heatmap(data=corr_mat, annot=True, ax=ax)
+		st.write(fig)
+
+		
+
+	#-------------------------------------------Predictive Model---------------------------------------
+	if task_option == 'Predictive Model':
+		st.sidebar.subheader('')
+		st.sidebar.subheader('')
+		model_name = ['Linear Regression',
+					  'Decision Tree',
+					  'Random Forest',
+					  'Gradient Boosting Tree']
+		houseprice = HousePrice()
+		houseprice.prepare_dataset()
+		houseprice.processed_X_train = houseprice.data_processing_pipeline(houseprice.X_train, 1)
+		houseprice.processed_X_test = houseprice.data_processing_pipeline(houseprice.X_test, 0)	
+		model_option = st.sidebar.selectbox('', model_name)
+
+		if model_option == 'Linear Regression':
+			st.write('Linear Regression Model - Stats Model')
+			result = houseprice.train_regression_statsmodel()
+			st.write(result.summary())
+			st.write('--------------------------------------------------')
+
 
 
 	if task_option == 'Prediction':

@@ -97,6 +97,7 @@ def app():
 	)
 
 	#Stock.train_test_forecast_report(SYMB)
+    # st.write('https://python.plainenglish.io/building-a-stock-market-app-with-python-streamlit-in-20-minutes-2765467870ee')
 
 
 
