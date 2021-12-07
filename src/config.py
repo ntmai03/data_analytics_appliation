@@ -27,20 +27,3 @@ S3_DATA_PATH = 'datool-data'
 S3_DATA_RAW_PATH = 'raw/'
 S3_DATA_PROCESSED_PATH = 'processed/'
 S3_DATA_BOOKING = 'booking/'
-
-
-def test_funct():
-	st.write('test')
-
-"""
-S3_CLIENT = boto3.client(
-    's3',
-    aws_access_key_id = st.secrets["aws_access_key_id"],
-    aws_secret_access_key = st.secrets["aws_secret_access_key"],
-    region_name = st.secrets["region_name"]
-)
-
-aws_access_key_id = "AKIAZFGIKEZ3JECBN5MV"
-aws_secret_access_key = "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"
-region_name = "us-east-2"
-"""
