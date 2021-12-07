@@ -10,7 +10,6 @@ sys.path.append('src')
 from src import config as cf
 from src.util import data_manager as dm
 from src.data_processing import diabetes_feature_engineering as fe
-from pipeline.credit_risk_pipeline import *
 from analysis.credit_risk import CreditRisk
 
 def app():
