@@ -52,7 +52,7 @@ class MultiPage:
 			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Stock Forecast Dashboard</p>'
 		if(page['title'] == '05-Text Data Analysis'):
 			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Natural Language Processing</p>'
-		if(page['title'] == '06-Travel Recommendation'):
+		if(page['title'] == '06-Hotel Recommendation'):
 			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Recommender System</p>'
 		if(page['title'] == '09-Credit Risk Analysis'):
 			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Classification Analysis</p>'

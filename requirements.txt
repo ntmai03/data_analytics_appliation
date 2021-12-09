@@ -18,3 +18,7 @@ selectorlib
 
 # for predictive models
 statsmodels
+
+# for deep learning
+tensorflow
+keras

@@ -8,7 +8,7 @@ from multipage import MultiPage
 from page import introduction
 from page import houseprice_analysis
 from page import time_series
-from page import travel_recommendation
+from page import hotel_recommendation
 from page import unsupervised_techniques
 from page import credit_risk_analysis
 
@@ -49,7 +49,7 @@ app.add_page("02-Credit Risk Analysis", credit_risk_analysis.app)
 app.add_page("03-Unsupervised Techniques", unsupervised_techniques.app)
 app.add_page("04-Time Series Data Analysis", time_series.app)
 app.add_page("05-Text Data Analysis", introduction.app)
-app.add_page("06-Travel Recommendation", travel_recommendation.app)
+app.add_page("06-Hotel Recommendation", hotel_recommendation.app)
 app.add_page("07-Online Shopping Recommendation", introduction.app)
 
 # The main app
