@@ -229,19 +229,15 @@ class HotelRecommendation:
 
     
     def generate_graph_data(self, listing_id, cluster_id):
-        house_df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'airbnb_cluster_df.csv')
-        st.write('step 1')
-        st.write(house_df.head())
-        house_df = house_df[house_df.listing_id == listing_id]
-        cluster_df = house_df[house_df.Cluster == cluster_id].reset_index()
-        st.write('step 2')
-        st.write(cluster_df.shape)
+        filename = 'airbnb_cluster' + str(cluster_id) + '.csv'
+        house_df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + filename)
+        house_df = house_df[house_df.listing_id == listing_id].reset_index()
 
         house_obj1 = []
         house_obj2 = []
 
-        for i in range(0, len(cluster_df)):
-            sent = cluster_df.text[i]
+        for i in range(0, len(house_df)):
+            sent = house_df.text[i]
             #sent = utils_preprocess_text(sent)
             obj1, obj2 = self.extract_info(sent)
             house_obj1 = house_obj1 + obj1
@@ -317,15 +313,16 @@ class HotelRecommendation:
         components.html(HtmlFile.read(), height=1000)
 
 
-    
-    def generate_graph(self, listing_id = 1296836, cluster_id = 6):
-        
-        
+    def generate_graph(self, listing_id, cluster_id, entities):
         
         graph_df = self.generate_graph_data(listing_id, cluster_id)
         entity_list = self.extract_entities(graph_df)
-        graph_df = graph_df[(graph_df.obj1.isin(entity_list)) | (graph_df.obj2.isin(entity_list))].reset_index()
-
+        if(len(entities) == 0):
+            entities = entity_list
+            flag = 1
+        else:
+            graph_df = graph_df[(graph_df.obj1.isin(st.session_state.ENTITY_OPTION)) | (graph_df.obj2.isin(st.session_state.ENTITY_OPTION))].reset_index()
+            flag = 0
         weight_graph_df = pd.DataFrame(graph_df.groupby(['obj1','obj2']).count()).reset_index()
         weight_graph_df.rename(columns={'ID':'weight'}, inplace=True)
         weight_graph_df = weight_graph_df.drop_duplicates(subset=['obj1','obj2'], keep='last')
@@ -333,6 +330,8 @@ class HotelRecommendation:
         # Generate a networkx graph based on subset data
         net_repulsion = self.generate_network_viz(weight_graph_df, 'obj1','obj2', 'weight', layout='repulsion')
 
+
+        return entities, flag
 
 
     ##############################################################################################
