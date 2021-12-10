@@ -1,3 +1,7 @@
+# for nlp
+spacy==2.3.5
+python -m spacy download en_core_web_sm
+
 streamlit
 numpy
 pandas
@@ -23,9 +27,7 @@ statsmodels
 tensorflow
 keras
 
-# for nlp
-spacy==2.3.5
-# python -m spacy download en_core_web_sm
+
 
 # for graph
 networkx
