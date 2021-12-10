@@ -11,6 +11,7 @@ from src import config as cf
 from src.util import data_manager as dm
 from src.data_processing import diabetes_feature_engineering as fe
 from util.booking_scrapper import BookingScrapper
+from analysis.hotel_recommendation import HotelRecommendation
 
 
 def app():
@@ -55,4 +56,12 @@ def app():
                           "News"]
         source_option = st.sidebar.selectbox('',source_type)
         st.sidebar.header('')
-        st.sidebar.header('')        
+        st.sidebar.header('')
+
+
+    if task_option == 'Knowledge Graph':
+        st.sidebar.header('')
+        st.sidebar.header('')
+        st.sidebar.subheader('Knowledge Graph')
+        hotel_recommendation = HotelRecommendation()
+        hotel_recommendation.generate_graph()
