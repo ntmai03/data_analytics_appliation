@@ -12,6 +12,25 @@ import sklearn
 import numpy as np
 import pandas as pd
 
+import streamlit.components.v1 as components
+import networkx as nx
+from pyvis.network import Network
+
+import spacy
+#spacy.download('en_core_web_sm')
+import en_core_web_sm
+nlp = en_core_web_sm.load()
+
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.stem.wordnet import WordNetLemmatizer 
+from nltk.stem import SnowballStemmer
+from nltk.tokenize.toktok import ToktokTokenizer
+from nltk.tokenize import RegexpTokenizer
+nltk.download('stopwords')
+nltk.download('punkt')
+nltk.download('wordnet')
+
 # for plotting
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -21,6 +40,8 @@ import matplotlib.patheffects as PathEffects
 from src.util import data_manager as dm
 from src.util import classification_util as clfu
 from src import config as cf
+
+
 
 
 hotel_stacked_ae_file = os.path.join(cf.TRAINED_MODEL_PATH, 'hotel_stacked_ae.pkl')
@@ -80,6 +101,237 @@ class HotelRecommendation:
         df = pd.concat([data_scaled,data_categorical], axis=1)
 
         return df
+
+
+    ##############################################################################################
+    # Knowledge Graph
+    ##############################################################################################
+    
+    def subtree_matcher(self, doc): 
+        subj = []
+        obj = []
+        pron = []
+        adj = []
+      
+        # iterate through all the tokens in the input sentence 
+        for i,tok in enumerate(doc): 
+        #print(tok.text,tok.dep_, tok.pos_)
+
+            # extract subject 
+            if (tok.dep_.endswith("subj") == True) & (tok.pos_.endswith("NOUN") == True):
+              subj.append(tok.text)
+
+            # extract subject 
+            if (tok.dep_.endswith("ROOT") == True) & (tok.pos_.endswith("PROPN") == True):
+              subj.append(tok.text)
+
+            # extract subject 
+            if (tok.dep_.endswith("ROOT") == True) & (tok.pos_.endswith("NOUN") == True):
+              subj.append(tok.text)
+
+            if (tok.dep_.endswith("subj") == True) & (tok.pos_.endswith("PROPN") == True):
+              subj.append(tok.text)
+
+            if (tok.dep_.endswith("compound") == True) & (tok.pos_.endswith("PROPN") == True):
+              obj.append(tok.text)
+            
+            if (tok.dep_.endswith("compound") == True) & (tok.pos_.endswith("NOUN") == True):
+              obj.append(tok.text)
+
+            # extract object 
+            if (tok.dep_.endswith("obj")) & (tok.pos_.endswith("NOUN") == True): 
+              obj.append(tok.text)
+            
+            # extract object 
+            if (tok.dep_.endswith("obj")) & (tok.pos_.endswith("PROPN") == True): 
+              obj.append(tok.text)
+
+            # extract object 
+            if (tok.dep_.endswith("conj")) & (tok.pos_.endswith("NOUN") == True): 
+              obj.append(tok.text)
+
+            # extract object b
+            if tok.dep_.endswith("attr") == True: 
+              obj.append(tok.text)
+
+            # extract pron 
+            if (tok.dep_.endswith("subj") == True) & (tok.pos_.endswith("PRON") == True): 
+              pron.append(tok.text)
+
+            if (tok.dep_.endswith("subj") == True) & (tok.pos_.endswith("PROPN") == True):
+              pron.append(tok.text)
+
+            if (tok.pos_ == 'ADJ'):
+              adj.append(tok.text)
+          
+        #print(subj)  
+
+        return subj, obj, pron, adj
+
+
+    
+    def extract_info(self, sent):
+
+        doc = nlp(sent)
+        clause_pos = [0]
+        clause_text = []
+        words_sentence = []
+        obj1 = []
+        obj2 = []
+
+        i = 0
+        for token in doc:
+            words_sentence.append(token.text)
+            #if(doc[i].pos_== "PUNCT"):
+            if(token.text == ","):
+              clause_pos.append(i + 1)
+            i = i + 1
+        clause_pos.append(i)
+
+        for i in range(0, len(clause_pos)-1):
+            start = clause_pos[i]
+            end = clause_pos[i+1] - 1
+            clause = ' '.join(words_sentence[start:end+1])
+            #print(clause)
+            doc = nlp(clause)
+            subj, obj, pron, adj = self.subtree_matcher(nlp(clause))
+            '''
+            print(subj)
+            print(obj)
+            print(adj)
+            print()
+            '''
+        
+        if(len(subj) > 0):
+            for se in subj:
+                if(len(obj) > 0):
+                    for oe in obj:
+                        obj1.append(se)
+                        obj2.append(oe)
+                if(len(adj) > 0):
+                    for ae in adj:
+                        obj1.append(se)
+                        obj2.append(ae)
+                if((len(obj) == 0) & (len(adj) == 0)):
+                    obj1.append(se)
+                    obj2.append('NA')
+        
+        if(len(subj) == 0):
+            if(len(obj) >= 0):
+                if(len(adj) >= 0):
+                    for oe in obj:
+                        for ae in adj:
+                                obj1.append(oe)
+                                obj2.append(ae)
+        
+        return obj1, obj2
+
+
+    
+    def generate_graph_data(self, listing_id, cluster_id):
+        house_df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'airbnb_cluster_df.csv')
+        st.write('step 1')
+        st.write(house_df.head())
+        house_df = house_df[house_df.listing_id == listing_id]
+        cluster_df = house_df[house_df.Cluster == cluster_id].reset_index()
+        st.write('step 2')
+        st.write(cluster_df.shape)
+
+        house_obj1 = []
+        house_obj2 = []
+
+        for i in range(0, len(cluster_df)):
+            sent = cluster_df.text[i]
+            #sent = utils_preprocess_text(sent)
+            obj1, obj2 = self.extract_info(sent)
+            house_obj1 = house_obj1 + obj1
+            house_obj2 = house_obj2 + obj2
+
+            graph_df = pd.DataFrame()
+            graph_df['obj1'] = house_obj1
+            graph_df['obj2'] = house_obj2
+            graph_df['ID'] = range(0,len(graph_df))
+            graph_df = graph_df[graph_df.obj2 != 'NA']
+
+            graph_df['obj1_type'] = graph_df['obj1'].apply(lambda x:nlp(x)[0].pos_)
+            graph_df['obj2_type'] = graph_df['obj2'].apply(lambda x:nlp(x)[0].pos_)
+
+            lem = nltk.stem.wordnet.WordNetLemmatizer()
+            graph_df['obj1'] = graph_df['obj1'].apply(lambda x: str.lower(x))
+            graph_df['obj2'] = graph_df['obj2'].apply(lambda x: str.lower(x))
+            graph_df['obj1'] = graph_df['obj1'].apply(lambda x: lem.lemmatize(x))
+            graph_df['obj2'] = graph_df['obj2'].apply(lambda x: lem.lemmatize(x))
+            
+        return graph_df
+
+    
+    def extract_entities(self, graph_df):
+        entity_obj1 = list(graph_df[(graph_df.obj1_type == 'PROPN') | (graph_df.obj1_type == 'NOUN')].obj1.values)
+        entity_obj2 = list(graph_df[(graph_df.obj2_type == 'PROPN') | (graph_df.obj2_type == 'NOUN')].obj2.values)
+
+        entity_list = entity_obj1 + entity_obj2
+        entity_list = pd.DataFrame(entity_list, columns = ['entity']).value_counts().reset_index()
+        entity_list.rename(columns = {0: 'count'}, inplace=True)
+
+        return list(entity_list.entity.values)
+
+
+    # Define function to generate Pyvis visualization
+    
+    def generate_network_viz(self, df, source_col, target_col, weights, 
+                             layout='barnes_hut',
+                             central_gravity=0.15,
+                             node_distance=420,
+                             spring_length=100,
+                             spring_strength=0.15,
+                             damping=0.96
+                             ):
+       
+        # Create networkx graph object from pandas dataframe
+        G = nx.from_pandas_edgelist(df, source_col, target_col, weights)
+
+        # Initiate PyVis network object
+        drug_net = Network(height='1000px', width='100%', bgcolor='#222222', font_color='white')
+        # drug_net = generate_network_viz(df_db_int_sm, 'drug_1_name', 'drug_2_name', 'weight', layout='repulsion')
+
+        # Take Networkx graph and translate it to a PyVis graph format
+        drug_net.from_nx(G)
+
+        # Generate network with specific layout settings
+        drug_net.repulsion(node_distance=420, central_gravity=0.33,
+                           spring_length=110, spring_strength=0.10,
+                           damping=0.95)
+
+        # Save and read graph as HTML file (on Streamlit Sharing)
+        html_file = os.path.join(cf.IMAGE_PATH, "pyvis_graph.html")
+        try:
+            drug_net.save_graph(html_file)
+            HtmlFile = open(html_file, 'r', encoding='utf-8')
+
+        # Save and read graph as HTML file (locally)
+        except:
+            drug_net.save_graph(html_file)
+            HtmlFile = open(html_file, 'r', encoding='utf-8')
+
+        # Load HTML file in HTML component for display on Streamlit page
+        components.html(HtmlFile.read(), height=1000)
+
+
+    
+    def generate_graph(self, listing_id = 1296836, cluster_id = 6):
+        
+        
+        
+        graph_df = self.generate_graph_data(listing_id, cluster_id)
+        entity_list = self.extract_entities(graph_df)
+        graph_df = graph_df[(graph_df.obj1.isin(entity_list)) | (graph_df.obj2.isin(entity_list))].reset_index()
+
+        weight_graph_df = pd.DataFrame(graph_df.groupby(['obj1','obj2']).count()).reset_index()
+        weight_graph_df.rename(columns={'ID':'weight'}, inplace=True)
+        weight_graph_df = weight_graph_df.drop_duplicates(subset=['obj1','obj2'], keep='last')
+
+        # Generate a networkx graph based on subset data
+        net_repulsion = self.generate_network_viz(weight_graph_df, 'obj1','obj2', 'weight', layout='repulsion')
 
 
 
