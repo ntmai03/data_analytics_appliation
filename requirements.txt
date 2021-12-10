@@ -28,6 +28,6 @@ spacy==2.3.5
 # python -m spacy download en_core_web_sm
 
 # for graph
-# networkx
+networkx
 pyvis
-streamlit pyvis networkx
+
