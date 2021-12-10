@@ -22,3 +22,11 @@ statsmodels
 # for deep learning
 tensorflow
 keras
+
+# for nlp
+spacy==2.3.5
+
+# for graph
+# networkx
+pyvis
+streamlit pyvis networkx
