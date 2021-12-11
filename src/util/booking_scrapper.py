@@ -14,13 +14,16 @@ import os
 import streamlit as st
 import boto3
 from io import StringIO
+import ast
 
+import streamlit as st
 import sys
 from pathlib import Path
 sys.path.append('src')
 
 sys.path.append('src')
 from src import config as cf
+
 
 class BookingScrapper():   
        
@@ -136,10 +139,12 @@ class BookingScrapper():
     """
     This method reads in tweet data as Json and extracts the data we want
     """
-    def get_data_from_API(self, accommodation_id):
+    def get_data_from_API(self, accommodation_id, page):
 
         querystring = {"locale":"en-gb","hotel_id": accommodation_id}
-        review_querystring = {"sort_type":"SORT_MOST_RELEVANT","locale":"en-gb","hotel_id":accommodation_id,"language_filter":"en-gb"}
+        review_querystring = {"sort_type":"SORT_MOST_RELEVANT","locale":"en-gb",
+                              "hotel_id":accommodation_id,"language_filter":"en-gb",
+                              "page_number": page}
         headers = self.get_api_header()                
         structure = self.get_structure()
 
@@ -154,7 +159,7 @@ class BookingScrapper():
             print(e)
             
     
-    def save_to_json(self):
+    def save_to_json(self, page):
         
         structure = self.get_structure()  
         data = {}
@@ -180,13 +185,19 @@ class BookingScrapper():
         with open(file_name, 'w') as outfile:
             json.dump(data, outfile)
         """
-        file_name = 'hotel_' + str(self.accommodation_id) + '.json'
+        file_name = 'hotel_' + str(self.accommodation_id) + '_' + str(page) + '.json'
+        cf.S3_CLIENT.put_object(
+            Bucket=self.city + '-booking-review',
+            Key=file_name,
+            Body = json.dumps(data).encode('UTF-8')
+        )
+        '''
         cf.S3_CLIENT.put_object(
             Bucket=cf.S3_DATA_PATH,
             Key=self.review_path + file_name,
             Body = json.dumps(data).encode('UTF-8')
         )
-
+        '''
 
     def search_accommodation(self, dest_id='-2601889', filter_by_currency='GBP', city='London'):
         
@@ -194,9 +205,6 @@ class BookingScrapper():
         self.city_path = os.path.join(cf.S3_DATA_BOOKING, self.city)
         self.hotel_path = self.city_path + '/hotel/'
         self.review_path = self.city_path + '/review/'
-
-        st.write(self.hotel_path)
-
 
         """
         os.makedirs(self.city_path, exist_ok=True)
@@ -222,15 +230,15 @@ class BookingScrapper():
         # source code
          
         booking_list = []
-        for page_numer in range(0, 2):
+        for page_numer in range(0, 1):
             st.write(page_numer)
             list_by_map_querystring = {
                 'units': 'metric',
                 'order_by': 'popularity',
-                'checkin_date': '2021-11-25',
+                'checkin_date': '2021-12-25',
                 'filter_by_currency': filter_by_currency,
                 'adults_number': '2',
-                'checkout_date': '2021-11-26',
+                'checkout_date': '2021-12-26',
                 'dest_id': dest_id,
                 'locale': 'en-gb',
                 'dest_type': 'city',
@@ -242,9 +250,17 @@ class BookingScrapper():
             } 
             list_by_map_response = requests.request("GET", list_by_map_url, headers=list_by_map_headers, params=list_by_map_querystring).json()
 
+            
             for list_result in list_by_map_response['result']:
                 accommodation_id = list_result['hotel_id']
-                booking_list.append(accommodation_id)
+                review_nr = list_result['review_nr']
+                hotel_name = list_result['hotel_name']
+                zipcode = list_result['zip']
+                url = list_result['url']
+                max_photo_url = list_result['max_photo_url']
+
+                booking_list.append([accommodation_id,hotel_name,review_nr,zipcode,url,max_photo_url])
+
                 file_name =  str(accommodation_id) + '.json'
                 '''
                 with open(self.hotel_path + '/' + file_name, 'w') as outfile:
@@ -262,7 +278,7 @@ class BookingScrapper():
                 )
          
         booking_list = pd.DataFrame(booking_list)
-        booking_list.columns = ['hotel_id']
+        booking_list.columns = ['hotel_id','hotel_name','review_nr','zipcode','url','max_photo_url']
         # booking_list.to_csv(self.city_path + '/booking_list.csv', index=False)
         csv_buffer = StringIO()
         booking_list.to_csv(csv_buffer)
@@ -280,5 +296,57 @@ class BookingScrapper():
         response = cf.S3_CLIENT.get_object( Bucket=cf.S3_DATA_PATH, Key=self.city_path + '/booking_list.csv')
         hotel_list = pd.read_csv(response.get("Body"))
         for hotel_id in hotel_list.hotel_id:
-            self.get_data_from_API(hotel_id)
-            self.save_to_json()
+            try:
+                #num_of_page = hotel_list[hotel_list.hotel_id == hotel_id].review_nr[0] / 25.0
+                #num_of_page = num_of_page.astype(int)
+                num_of_page = 5
+            except:
+                pass
+
+            for page_numer in range(0, num_of_page):
+                st.write(hotel_id, page_numer)
+                self.get_data_from_API(hotel_id, page_numer)
+                self.save_to_json(page_numer)
+
+
+    def create_review_file(self, city):
+
+        self.city = city
+        self.city_path = os.path.join(cf.S3_DATA_BOOKING, self.city)
+        self.hotel_path = self.city_path + '/hotel/'
+
+        Bucket = self.city + '-booking-review'
+        all_objects = cf.S3_CLIENT.list_objects(Bucket=Bucket) 
+        accommodation_review = []
+
+        for file in all_objects['Contents']:
+            filename = file['Key']
+            response = cf.S3_CLIENT.get_object(Bucket=Bucket, Key=filename)
+            reviews_data = json.loads(response.get("Body").read())
+            accommodation_id = reviews_data['accommodation_id'] 
+            reviews = reviews_data['reviews']
+            try:
+                reviews = ast.literal_eval(reviews)
+                review_result = reviews['result']
+                for i in range(0, len(review_result)):
+                    review = review_result[i]
+                    pros = review['pros']
+                    cons = review['cons']
+                    review = pros + '. ' + cons
+                    accommodation_review.append([accommodation_id, pros, cons, review])
+                    
+            except:
+                pass
+        accommodation_review_df = pd.DataFrame(accommodation_review, columns = ['accommodation_id', 'pros', 'cons', 'review'])
+        review_buffer = StringIO()
+        accommodation_review_df.to_csv(review_buffer)
+        cf.S3_CLIENT.put_object(
+            Bucket=cf.S3_DATA_PATH,
+            Key=self.city_path + '/review.csv',
+            Body = review_buffer.getvalue()
+
+        )
+        st.write('done')
+        st.write(self.city_path + '/review.csv')
+
+ 
