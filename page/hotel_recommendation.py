@@ -40,14 +40,12 @@ def app():
 
         if(location_option == 'London'):
             Booking = BookingScrapper()
-            Booking.search_accommodation(dest_id='-2601889', city='London')
+            Booking.search_accommodation(dest_id='-2601889', city='london')
             Booking.get_review()
-            Booking.create_review_file()
         if(location_option == 'Paris'):
             Booking = BookingScrapper()
-            Booking.search_accommodation(dest_id='-1456928', city='Paris')
+            Booking.search_accommodation(dest_id='-1456928', city='paris')
             Booking.get_review()
-            Booking.create_review_file()
 
     if task_option == 'Transform Data':
         location_list = ['Select city...',
@@ -59,10 +57,10 @@ def app():
 
         if(location_option == 'London'):
             Booking = BookingScrapper()
-            Booking.create_review_file(location_option)
+            Booking.create_review_file(city='london')
         if(location_option == 'Paris'):
             Booking = BookingScrapper()
-            Booking.create_review_file(location_option)
+            Booking.create_review_file(city='paris')
 
 
     if task_option == 'Topic Modeling':
