@@ -53,6 +53,7 @@ from src.util import classification_util as clfu
 from src import config as cf
 
 
+credit_risk_class_ratio = os.path.join(cf.ANALYSIS_PATH, 'credit_risk_class_ratio.npy')
 credit_risk_median_imputer = os.path.join(cf.ANALYSIS_PATH, 'credit_risk_median_imputer.npy')
 credit_risk_knn_imputer = os.path.join(cf.ANALYSIS_PATH, 'credit_risk_knn_imputer.npy')
 credit_risk_scaler = os.path.join(cf.ANALYSIS_PATH, 'credit_risk_scaler.pkl')
@@ -74,8 +75,34 @@ class CreditRisk:
                      'inq_last_6mths', 'open_acc', 'pub_rec', 'revol_bal', 'revol_util', 'total_acc', 
                      'initial_list_status']
 
-    TARGET = 'Class'
     RAW_TARGET = 'loan_status'
+
+    TARGET_VALUE = ['Fully Paid', 'Charged Off', 'Default']
+
+    # rename columns
+    FEATURE_MAP = {'loan_status': 'Class',}
+
+    TARGET = 'Class'
+
+    # data type conversion
+    DATA_TYPE = {'term': 'int64',
+                'Class': 'int64'}
+
+    NUMERICAL_VARS_WITH_NA = []
+
+    NUMERICAL_VARS = ['loan_amnt', 'term', 'int_rate', 'annual_inc', 'dti', 'delinq_2yrs', 
+                      'inq_last_6mths', 'open_acc', 'pub_rec', 'revol_bal', 'revol_util', 'total_acc']
+
+    #CATEGORICAL_VARS = ['grade', 'sub_grade', 'emp_title', 'emp_length', 'home_ownership', 
+    #                    'verification_status', 'purpose', 'title', 'zip_code', 'addr_state', 'initial_list_status']
+    CATEGORICAL_VARS = ['home_ownership', 'verification_status', 'initial_list_status']
+
+    TEMPORAL_VARS = ['issue_d', 'earliest_cr_line']
+
+    RATIO_VARS = ['sub_grade', 'purpose', 'zip_code']
+
+    DUMMY_VARS = []
+
 
     TRAIN_VARS = ['loan_amnt', 'term', 'int_rate', 'annual_inc', 'dti', 'delinq_2yrs', 'inq_last_6mths', 
                   'open_acc', 'pub_rec', 'revol_bal', 'revol_util', 'total_acc', 'num_emp_length', 
@@ -119,7 +146,12 @@ class CreditRisk:
         '''
 
         # get data from s3
-        self.data = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_RAW_PATH + "loan_data_2007_2014.csv")
+        data = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_RAW_PATH + "loan_data_2007_2014.csv")
+
+        # filter data, remove invalid rows
+        data = data[data[self.RAW_TARGET].isin(self.TARGET_VALUE)]
+
+        self.data = data
         
         # Split data to train set and test set       
         self.X_train, self.X_test, self.y_train, self.y_test = clfu.split_data(self.data, self.data[self.RAW_TARGET])
@@ -133,12 +165,11 @@ class CreditRisk:
         # Rename columns
         data.rename(columns=self.FEATURE_MAP, inplace=True)
 
-        # replace '?' with NA
-        data.replace('?', np.NaN, inplace=True)
-
         # data type conversion
+        '''
         for key in self.DATA_TYPE:
             data[key] = data[key].astype(self.DATA_TYPE[key])
+        '''
 
         # Remove duplicated data
         data = data.drop_duplicates(keep = 'last')
@@ -149,7 +180,77 @@ class CreditRisk:
         return data
 
 
- 
+    def create_target_value(self, df):
+
+        data = df.copy()
+
+        # Convert Class to 1 if the value was 'Fully Paid', 0 is values was {'Charged Off', 'Detault'}
+        data[self.TARGET] = data[self.TARGET].map({'Fully Paid': 0, 'Charged Off': 1, 'Default':  1})
+
+        return data
+
+
+    def transform_term(self, df, var):
+
+        data = df.copy()
+
+        data[var] = data[var].map({' 36 months': 36, ' 60 months': 60})
+
+        return data
+
+
+    def transform_num_emp_length(self, df, var):
+
+        data = df.copy()
+
+        data['num_emp_length'] = data[var].map({'10+ years':10, 
+                                         '9 years':9, 
+                                         '8 years':8,
+                                         '7 years':7,
+                                         '6 years':6,
+                                         '5 years':5,
+                                         '4 years':4,
+                                         '3 years':3,
+                                         '2 years':2,
+                                         '1 year':1,
+                                         '< 1 year':0.5})
+
+        return data
+
+
+    def calculate_class_ratio(self, df, var_list, train_flag=0):
+
+        data = df.copy()
+
+        if(train_flag == 1):
+            class_ratio_dict = {}
+            for var in var_list:
+                data_train = pd.concat([data, self.y_train])
+                class_0 = data_train[data_train[self.TARGET] == 0].groupby(var).count()[self.TARGET]
+                class_1 = data_train[data_train[self.TARGET] == 1].groupby(var).count()[self.TARGET]
+                class_ratio = class_1/class_0
+                class_ratio_dict[var] = class_ratio
+            np.save(credit_risk_class_ratio, class_ratio_dict)
+        else:
+            class_ratio_dict = np.load(credit_risk_class_ratio, allow_pickle=True).item()
+
+        for var in var_list:
+            class_ratio = class_ratio_dict[var]
+            data[var + '_ratio'] = data[var].map(class_ratio)
+
+        return data
+
+
+
+    def replace_categories(self, df, var, target):
+
+        data = df.copy()
+        ordered_labels = data.groupby([var])[target].mean().sort_values().index
+        ordinal_label = {k:i for i,k in enumerate(ordered_labels, 0)}
+        return ordinal_label
+
+
+
     def encode_categorical_ordinal(self, df, var_list, target, train_flag=0):
 
         data = df.copy()
@@ -170,6 +271,18 @@ class CreditRisk:
 
         return data
 
+
+
+    def transform_temporal_vars(self, df):
+
+        data = df.copy()
+
+        data['issue_d_date'] = pd.to_datetime(data['issue_d'], format = '%b-%y')
+        data['earliest_cr_line_date'] = pd.to_datetime(data['earliest_cr_line'], format = '%b-%y')
+        data['earliest_cr_line_date'] = pd.to_datetime(data['earliest_cr_line'], format = '%b-%y')
+        data['earliest_cr_line_date'] = pd.to_datetime(data['earliest_cr_line'], format = '%b-%y')
+
+        return data
 
 
     def impute_na_median(self, df, var_list, train_flag=0):
@@ -221,8 +334,8 @@ class CreditRisk:
 
         # persist the model for future use
         if(train_flag == 1):
-            joblib.dump(scaler, house_price_scaler)
-        scaler = joblib.load(house_price_scaler)
+            joblib.dump(scaler, credit_risk_scaler)
+        scaler = joblib.load(credit_risk_scaler)
 
         data = pd.DataFrame(scaler.transform(data[var_list]), columns=var_list)
 
@@ -239,10 +352,10 @@ class CreditRisk:
         
         if(train_flag == 1):
             train_dummy = list(data_categorical.columns)
-            pd.Series(train_dummy).to_csv(house_price_dummy_vars, index=False)
+            pd.Series(train_dummy).to_csv(credit_risk_dummy_vars, index=False)
         else:
             test_dummy = list(data_categorical.columns)
-            train_dummy = pd.read_csv(house_price_dummy_vars)
+            train_dummy = pd.read_csv(credit_risk_dummy_vars)
             train_dummy.columns = ['Name']
             train_dummy = list(train_dummy.Name.values)   
             
@@ -258,11 +371,10 @@ class CreditRisk:
     def data_processing_pipeline(self, df, train_flag=0):
 
         df = self.clean_data(df)
-        df = self.create_season(df, self.TEMPORAL_VARS)
-        df = self.create_sqft_ratio(df, 'sqft_living', 'sqft_living15')
-        df = self.encode_categorical_ordinal(df, self.TEMP_CATEGORICAL_VARS, self.TARGET, train_flag)
-        df = self.impute_na_median(df, self.NUMERICAL_VARS_WITH_NA, train_flag)
-
+        df = self.create_target_value(df)
+        df = self.transform_term(df, 'term')
+        df = self.transform_num_emp_length(df, 'emp_length')
+        df = self.calculate_class_ratio(df, self.RATIO_VARS, train_flag)
         data_scaled = self.scaling_data(df, self.NUMERICAL_VARS, train_flag)
         data_categorical = self.create_dummy_vars(df, self.CATEGORICAL_VARS, train_flag)
         df = pd.concat([data_scaled,data_categorical], axis=1)

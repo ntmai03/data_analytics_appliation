@@ -2,6 +2,8 @@
 import sys
 from pathlib import Path
 import os
+from io import BytesIO
+import datetime
 
 import streamlit as st
 
@@ -33,11 +35,9 @@ from sklearn.model_selection import GridSearchCV, KFold, cross_val_score, Shuffl
 from sklearn import model_selection
 from sklearn.model_selection import train_test_split
 
-import sklearn.decomposition as dec
-from sklearn.manifold import TSNE
-import sklearn.datasets as ds
-import sklearn.cluster as clu
+from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
+from sklearn.cluster import AgglomerativeClustering
 
 import statsmodels.api as sm
 import sklearn
@@ -47,61 +47,36 @@ import joblib
 
 from src.data_processing import diabetes_feature_engineering as fe
 from src.util import data_manager as dm
+from src.util import unsupervised_util as unu
 from src import config as cf
-# from src.pipeline import diabetes_pipeline as pl
 
-# Evaluation metrics for Classification
-from sklearn.metrics import (confusion_matrix, classification_report, accuracy_score, roc_curve, 
-                             r2_score, roc_auc_score, f1_score, precision_score, recall_score, 
-                             precision_recall_curve, precision_recall_fscore_support, auc, 
-                             average_precision_score)
+import sklearn.decomposition as dec
+import sklearn.datasets as ds
+import sklearn.cluster as clu
 
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from scipy.sparse import csc_matrix
 
-def scatter(x, colors):
-    # We choose a color palette with seaborn.
-    palette = np.array(sns.color_palette("hls", 10))
+from sklearn.model_selection import train_test_split
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+from sklearn.mixture import GaussianMixture
 
-    # We create a scatter plot.
-    f = plt.figure(figsize=(8, 8))
-    ax = plt.subplot(aspect='equal')
-    sc = ax.scatter(x[:,0], x[:,1], lw=0, s=6,
-                    c=palette[colors.astype(np.int)])
-    plt.xlim(-25, 25)
-    plt.ylim(-25, 25)
-    ax.axis('off')
-    ax.axis('tight')
+# TensorFlow ≥2.0 is required
+import tensorflow as tf
+from tensorflow import keras
+assert tf.__version__ >= "2.0"
 
-    # We add the labels for each digit.
-    txts = []
-    for i in range(10):
-        # Position of each label.
-        xtext, ytext = np.median(x[colors == i, :], axis=0)
-        txt = ax.text(xtext, ytext, str(i), fontsize=24)
-        txt.set_path_effects([
-            PathEffects.Stroke(linewidth=5, foreground="w"),
-            PathEffects.Normal()])
-        txts.append(txt)
-
-    return f, ax, sc, txts
-
-def scaler(data):
-    scaler = MinMaxScaler(feature_range = (0, 1))
-    data_scaled = pd.DataFrame(scaler.fit_transform(data))
-    data_scaled.columns = data.columns
-    
-    return data
-
-
-def relabel(cl):
-    """ Relabel a clustering with three clusters to match the original classes"""
-    if np.max(cl) != 2:
-        return cl
-    perms = np.array(list(permutations((0,1,2))))
-    i = np.argmin([np.sum(np.abs(perm[1] - y)) for perm in perms])
-    p = perms[i]
-    return p[cl]
-
-
+# Deep Learnign libraries
+import tensorflow as tf
+import keras
+from keras.models import Model, load_model
+from keras.layers import Input, Dense
+from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras import regularizers
 
 class UnsupervisedAnalysis:
     """
@@ -109,146 +84,299 @@ class UnsupervisedAnalysis:
      upon initialization load a sample of data to check if stock exists. 
         
     """
-    params={
-    'changepoint_prior_scale':0.0018298282889708827,
-    'holidays_prior_scale':0.00011949782374119523,
-    'seasonality_mode':'additive',
-    'seasonality_prior_scale':4.240162804451275
-        }
 
     def __init__(self):
  
-        self.TRAIN_VARS = None
-        self.X = None
-        self.y = None
-        self.model = None
-        self.model = None
+        self.X_train = None
+        self.y_train = None
+        self.X_test = None
+        self.y_test = None
+        self.X_valid = None
+        self.y_valid = None
 
 
+    def load_mnist_ds(self, flag=0):
+        (X_train_full, y_train_full), (X_test, y_test) = keras.datasets.mnist.load_data()
+        X_valid, X_train = X_train_full[:5000], X_train_full[45000:]
+        y_valid, y_train = y_train_full[:5000], y_train_full[45000:]
 
-    def load_digit_ds(self):
-        df = ds.load_digits()
-        self.X = pd.DataFrame(df.data)
-        self.y = df.target
-        self.images = df.images
+        self.X_train = X_train
+        self.y_train = y_train
+        self.X_test = X_test
+        self.y_test = y_test
+        self.X_valid = X_valid
+        self.y_valid = y_valid
+
+        if(flag == 1):
+            st.write(X_train.shape)
+            st.write(X_train[0:2])
 
 
-    def show_image(self):
-        nrows, ncols = 2, 5
-        fig = plt.figure(figsize=(6,3))
+    def show_image(self, n_images=5):
+        nrows, ncols = 1, 5
+        fig = plt.figure(figsize=(n_images * 1.5, 2))
         plt.gray()
         for i in range(ncols * nrows):
             ax = plt.subplot(nrows, ncols, i + 1)
-            ax.matshow(self.images[i,...])
+            #ax.imshow(self.X_train[0:n_images].reshape(len(self.X_train[0:n_images]),28,28)[i])
+            ax.imshow(self.X_train[i])
             plt.xticks([])
             plt.yticks([])
-            plt.title(self.y[i])
-        st.write(fig)    
+
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf)
 
 
-    def pca_analysis(self, n_components=50, c=None, cmap='viridis'):
+    def process_data(self):
+        self.scaled_Xtrain = self.X_train / 255.
+        self.scaled_Xtest = self.X_test / 255.
+        self.scaled_Xvalid = self.X_valid / 255.
 
-        pca = dec.PCA()
-        pca_value = pca.fit_transform(self.X)
+        self.scaled_Xtrain = self.scaled_Xtrain.reshape(-1, 784)
+        self.scaled_Xtest = self.scaled_Xtest.reshape(-1, 784)
+        self.scaled_Xvalid = self.scaled_Xtest.reshape(-1, 784)
+
+
+    def pca_analysis(self):
+
+        pca = PCA()
+        self.process_data()
+        X_train_pca = pca.fit(self.scaled_Xtrain)
         
         # -------------plot variance ratio and cumulative sum--------------
-        cumulative_list = []
-        cumulative_sum = 0
-        for v in pca.explained_variance_ratio_:
-            cumulative_list.append(cumulative_sum + v)
-            cumulative_sum = cumulative_list[-1]
-            
-        fig = plt.figure(figsize=(18,6))
-        plt.subplot(1,2,1)
-        plt.plot(pca.explained_variance_ratio_[0:n_components])
-        features = list(range(0,n_components))
-        plt.bar(features,pca.explained_variance_ratio_[0:n_components])
-        plt.xlabel('PCA features')
-        plt.ylabel('variance %')
+        cumsum = np.cumsum(pca.explained_variance_ratio_)
+        d = np.argmax(cumsum >= 0.95) + 1
+        st.write()
+        st.markdown('#### Number of principal components corresponding to 95 percent of data: ')
+        st.write(str(d))
+         
+        st.markdown('#### Select number of principal components')   
+        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10,4))
+        ax[0].plot(pca.explained_variance_ratio_[0:500])
+        ax[0].grid(True)
+
+        ax[1].plot(cumsum, linewidth=3)
+        ax[1].axis([0, 400, 0, 1])
+        plt.xlabel("Dimensions")
+        plt.ylabel("Cumsum Explained Variance")
+        ax[1].plot([d, d], [0, 0.95], "k:")
+        ax[1].plot([0, d], [0.95, 0.95], "k:")
+        ax[1].plot(d, 0.95, "ko")
+        ax[1].annotate("Elbow", xy=(65, 0.85), xytext=(70, 0.7), arrowprops=dict(arrowstyle="->"), fontsize=16)
+        plt.grid(True)
+
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf)
+
+
+    def pca_transform(self, n_components=0.80):
+        pca = PCA(n_components=n_components)
+        X_train_pca = pca.fit_transform(self.scaled_Xtrain)
+
+        st.markdown("#### Number of principal components corresponding to 80 percent of variance")
+        st.write(pca.n_components_, np.sum(pca.explained_variance_ratio_))
+        st.markdown("#### PCA transformed data")
+        st.write(X_train_pca[0:3])
+        unu.visualize_transformed_data(X_train_pca, self.y_train)
+
+
+    def svd_analysis(self):
+        self.process_data()
+        U, S, V = np.linalg.svd(self.scaled_Xtrain)
+
+        st.markdown('#### The 10 largest values:' )
+        st.write(S[0:10])
+        self.U = U
+        self.S = S
+        self.V = V
+
+        # Select number of latent vars
+        st.markdown('#### Select number of latent vars')
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,5))
+        ax.plot(S, 'ks-')
+        plt.xlabel('Component number')
+        plt.ylabel('$\sigma$')
+        plt.title('"Scree plot" of singular values')
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf)
+
+
+    def svd_transform(self, n_components=30):
+        # list the components you want to use for the reconstruction
+        n_comps = np.arange(0,n_components)
+
+        # reconstruct the low-rank version of the picture
+        X_pred = self.U[:,n_comps]@np.diag(self.S[n_comps])@self.V[:,n_comps].T 
         
-        plt.subplot(1,2,2)
-        plt.plot(cumulative_list[0:n_components])
-        plt.xlabel('PCA features')
-        plt.ylabel('cumulative sum')
-        st.write(fig)
-        
-        
-        # -----------------plot the first 2 components---------------------
-        fig = plt.figure(figsize=(12,6))
-        plt.scatter(pca_value[:,0], pca_value[:,1], s=5, c=c, alpha=0.5, cmap=cmap)
-        # Add a legend
-        # plt.legend(c,loc=1)
-        plt.title('PCA Dimensionality Reduction')
-        plt.xlabel("Principal Component 1")
-        plt.ylabel("Princiapl Component 2")
-        st.write(fig)
+        st.markdown("#### SVD Transformed data")
+        st.write(self.U[:5,n_comps])
+        unu.visualize_transformed_data(self.U[:,n_comps], self.y_train)               
 
 
-    def svd_analysis(self, n_components=50, c=None, cmap='viridis'):
-        svd = dec.TruncatedSVD()
-        svd_value = svd.fit_transform(self.X)
-        
-        # plot the first 2 components
-        fig = plt.figure(figsize=(12,6))
-        plt.scatter(svd_value[:,0], svd_value[:,1], s=5, c=c, alpha=0.5, cmap=cmap)
-        # Add a legend
-        # plt.legend(c,loc=1)
-        plt.title('SVD Dimensionality Reduction')
-        plt.xlabel("SVD Component 1")
-        plt.ylabel("SVD Component 2")
-        st.write(fig)
+    def autoencoder_analysis(self):
+
+        self.process_data()
+
+        # Construct architecture
+        tf.random.set_seed(42)
+        np.random.seed(42)
+        keras.backend.clear_session()
+        tf.keras.backend.clear_session()
+
+        # No of Neurons in each layer []
+        input_dim = self.scaled_Xtrain.shape[1]
+        encoding1_dim = 100
+        encoding2_dim = 550
+        latent_dim = 20
+
+        input_layer = Input(shape=(input_dim, ))
+        encoder = Dense(int(encoding1_dim), activation="relu")(input_layer)
+        encoder = Dense(int(encoding2_dim), activation='relu')(encoder)
+        encoder = Dense(int(latent_dim), activation='relu')(encoder)
+        decoder = Dense(int(encoding2_dim), activation='relu')(encoder)
+        decoder = Dense(int(encoding1_dim), activation='relu')(decoder)
+        decoder = Dense(int(input_dim), activation='relu')(decoder)
+        autoencoder = Model(inputs=input_layer, outputs=decoder)
+
+        # this models maps an input to its encoded representation
+        encoder_layer = Model(input_layer, encoder)
+        # create a placeholder for an encoded (32-dimensional) input
+        encoded_input = Input(shape=(int(latent_dim),))
+        # retrieve the last layer of the autoencoder model
+        decoder_layer = autoencoder.layers[-3]
+        # create the decoder model
+        decoder_layer = Model(encoded_input, decoder_layer(encoded_input)) 
+
+        # train model
+        nb_epoch = 20
+        batch_size = 10
+        autoencoder.compile(optimizer='adam', loss='mse')
+        self.autoencoder = autoencoder
+        self.encoder_layer = encoder_layer
+
+        cp = ModelCheckpoint(filepath='autoencoder1.h5', save_best_only=True, verbose=0)
+        tb = TensorBoard(log_dir='./logs', histogram_freq=0, write_graph=True, write_images=True)
+        t_ini = datetime.datetime.now()
+        history = autoencoder.fit(self.scaled_Xtrain, 
+                                  self.scaled_Xtrain, 
+                                  epochs=nb_epoch, 
+                                  #batch_size=batch_size, 
+                                  shuffle=True, 
+                                  validation_data=(self.scaled_Xvalid, self.scaled_Xvalid),
+                                  #verbose=1,
+        ).history
+        t_fin = datetime.datetime.now()
+        st.write('Time to run the model: {} Sec.'.format((t_fin - t_ini).total_seconds()))
+
+        df_history = pd.DataFrame(history) 
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(10,5))
+        ax.plot(df_history['loss'], linewidth=2, label='Train')
+        ax.plot(df_history['val_loss'], linewidth=2, label='Test')
+        plt.legend(loc='upper right')
+        plt.title('Model loss')
+        plt.ylabel('Loss')
+        plt.xlabel('Epoch')
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf)
 
 
-    def tsne_analysis(self, c=None, cmap='viridis'):
-        tsne = TSNE(n_components=2, random_state=9)
-        tsne_value = tsne.fit_transform(self.X)
-        
-        # plot the first 2 components
-        fig = plt.figure(figsize=(12,6))
-        plt.scatter(tsne_value[:,0], tsne_value[:,1], s=5, c=c, 
-                    alpha=0.5, cmap=cmap)
-        # Add a legend
-        # plt.legend(loc='best')
-        plt.title('TSNE Dimensionality Reduction')
-        plt.xlabel("TSNE Component 1")
-        plt.ylabel("TSNE Component 2")
-        st.write(fig) 
+    def autoencoder_transform(self, n_components=30):
+        X_train_ae = self.encoder_layer(self.scaled_Xtrain)
+
+        st.markdown("#### AutoeEncoder Transformed data")
+        st.write(X_train_ae[:5])
+        unu.visualize_transformed_data(X_train_ae, self.y_train)   
 
 
-    def clustering(self, n_clusters):
-    
-        pca = dec.PCA()
-        pca_value = pca.fit_transform(self.X)
-        PCA_df = pd.DataFrame(pca_value)
-        selected_vars = range(0,15)
-        PCA_df = PCA_df[selected_vars]
-
-        fig, axes = plt.subplots(3, 3, figsize=(10,10), sharex=True, sharey=True)
-        axes[0, 0].scatter(PCA_df.iloc[:,0], PCA_df.iloc[:,1], s=5, c=self.y, cmap=plt.cm.rainbow)
-        axes[0, 0].set_title("True labels")
-
-        for ax, est in zip(axes.flat[1:], [
-            #clu.SpectralClustering(n_clusters),
-            #clu.AgglomerativeClustering(n_clusters),
-            #clu.MeanShift(),
-            #clu.AffinityPropagation(),
-            #clu.DBSCAN(),
-            clu.KMeans(n_clusters),
-            GaussianMixture(n_components=n_clusters, n_init=10),
-        ]):
-            # est.fit(X_data)
-            c = relabel(est.fit_predict(self.X))
-            ax.scatter(PCA_df.iloc[:,0], PCA_df.iloc[:,1], s=5, c=c, cmap=plt.cm.rainbow)
-            ax.set_title(est.__class__.__name__)
-
-          
-        # Fix the spacing between subplots.
-        fig.tight_layout() 
-        st.write(fig)
+    def kmeans_analysis(self, n_clusters=10):
 
 
+        # get data from s3
+        X_train_ae = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'Mnist_ae.csv')
+        X_train_ae_tsne = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'Mnist_ae_tsne.csv')
+     
+        kmeans = KMeans(n_clusters=n_clusters, random_state=9, init='k-means++')
+        kmeans_cluster = kmeans.fit_predict(X_train_ae)
+
+        # visualize cluster
+        unu.compare_truelabel_cluster(X_train_ae_tsne.values, self.y_train, kmeans_cluster)
+
+        # specifyign number of clusters with Elbow method
+        kmeans_per_k = [KMeans(n_clusters=k, random_state=9).fit(X_train_ae) for k in range(1, 20)]
+        inertias = [model.inertia_ for model in kmeans_per_k]
+
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7,4))
+        ax.plot(range(1, 20), inertias, "bo-")
+        plt.xlabel("$k$", fontsize=14)
+        plt.ylabel("Inertia", fontsize=14)
+        plt.title('Elbow Method')
+        plt.annotate('Elbow',
+                     xy=(10, inertias[9]),
+                     xytext=(0.55, 0.55),
+                     textcoords='figure fraction',
+                     fontsize=16,
+                     arrowprops=dict(facecolor='black', shrink=0.1)
+                    )
+        ax.axis([1, 20, 300000, 700000])
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf) 
 
 
+    def gmm_analysis(self, n_clusters=10):
+
+        # get data from s3
+        X_train_ae = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'Mnist_ae.csv')
+        X_train_ae_tsne = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'Mnist_ae_tsne.csv')
+      
+        gmm = GaussianMixture(n_components=10, n_init=10, random_state=9)
+        gmm.fit(X_train_ae)
+
+        # visualize cluster
+        unu.compare_truelabel_cluster(X_train_ae_tsne.values, self.y_train, gmm.predict(X_train_ae))
+
+        # specifyign number of clusters with Elbow method
+        gms_per_k = [GaussianMixture(n_components=k, n_init=10, random_state=9).fit(X_train_ae)
+             for k in range(1, 20)]
+
+        bics = [model.bic(X_train_ae) for model in gms_per_k]
+        aics = [model.aic(X_train_ae) for model in gms_per_k]
+
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7,4))
+        ax.plot(range(1, 20), bics, "bo-", label="BIC")
+        ax.plot(range(1, 20), aics, "go--", label="AIC")
+        plt.xlabel("$k$", fontsize=14)
+        plt.ylabel("Information Criterion", fontsize=14)
+        plt.axis([1, 19.5, np.min(aics) - 50, np.max(aics) + 50])
+        plt.annotate('Minimum',
+                     xy=(10, bics[9]),
+                     xytext=(0.35, 0.6),
+                     textcoords='figure fraction',
+                     fontsize=14,
+                     arrowprops=dict(facecolor='black', shrink=0.1)
+                    )
+        plt.legend()
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf) 
+
+
+    def hierarchical_analysis(self, n_clusters=10):
+
+        # get data from s3
+        X_train_ae = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'Mnist_ae.csv')
+        X_train_ae_tsne = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'Mnist_ae_tsne.csv')
+      
+        agglo = AgglomerativeClustering(n_clusters = 10, affinity = 'euclidean', linkage = 'complete')
+        agglo.fit_predict(X_train_ae)
+        y_agglo = agglo.fit_predict(X_train_ae)
+
+        # visualize cluster
+        unu.compare_truelabel_cluster(X_train_ae_tsne.values, self.y_train, y_agglo)
 
 
 

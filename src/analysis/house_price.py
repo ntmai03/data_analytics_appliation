@@ -37,6 +37,7 @@ import statsmodels.api as sm
 import sklearn
 # Regression
 from sklearn.linear_model import LinearRegression,Ridge,Lasso,RidgeCV,ElasticNet,LogisticRegression
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor,BaggingRegressor,GradientBoostingRegressor,AdaBoostRegressor
 from sklearn.svm import SVR
 from sklearn.neighbors import KNeighborsRegressor
@@ -52,13 +53,11 @@ import joblib
 from src.util import data_manager as dm
 from src.util import regression_util as regu
 from src import config as cf
-# from src.pipeline import diabetes_pipeline as pl
 
-# Evaluation metrics for Classification
-from sklearn.metrics import (confusion_matrix, classification_report, accuracy_score, roc_curve, 
-                             r2_score, roc_auc_score, f1_score, precision_score, recall_score, 
-                             precision_recall_curve, precision_recall_fscore_support, auc, 
-                             average_precision_score)
+
+# Evaluation metrics for Regression
+
+
 house_price_encode_ordinal_label = os.path.join(cf.ANALYSIS_PATH, 'house_price_encode_ordinal_label.npy')
 house_price_median_imputer = os.path.join(cf.ANALYSIS_PATH, 'house_price_median_imputer.npy')
 house_price_knn_imputer = os.path.join(cf.ANALYSIS_PATH, 'house_price_knn_imputer.npy')
@@ -155,7 +154,6 @@ class HousePrice:
 
     def __init__(self):
  
-        self.TRAIN_VARS = None
         self.data = None
         self.X_train = None
         self.X_test = None
@@ -175,7 +173,7 @@ class HousePrice:
     # def  impute_median_na(self, var_list, train_flag=0):
 
 
-    def prepare_dataset(self):
+    def load_dataset(self):
 
         '''
         # get data from local machine
@@ -189,6 +187,17 @@ class HousePrice:
         # Split data to train set and test set       
         self.X_train, self.X_test, self.y_train, self.y_test = dm.split_data(self.data, self.data[self.target])
 
+
+    def prepare_dataset(self):
+
+        # get data from s3
+        df_train = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'houseprice_train.csv')
+        df_test = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'houseprice_test.csv')
+      
+        self.processed_X_train = df_train[self.TRAIN_VARS]
+        self.y_train = df_train[self.TARGET]
+        self.processed_X_test = df_test[self.TRAIN_VARS]
+        self.y_test = df_test[self.TARGET]
 
 
     def clean_data(self, df):
@@ -375,6 +384,9 @@ class HousePrice:
     ##############################################################################################
     def train_regression_statsmodel(self):
 
+        # get train set and test set
+        self.prepare_dataset()        
+
         # add constant
         X_train_const = sm.add_constant(self.processed_X_train)
 
@@ -386,6 +398,9 @@ class HousePrice:
 
 
     def train_regression_sklearn(self):
+
+        # get train set and test set
+        self.prepare_dataset()
 
         # Train model
         model = LinearRegression(fit_intercept = True)
@@ -401,7 +416,13 @@ class HousePrice:
         return summary_table
 
 
+
+
+
     def train_random_forest(self):
+
+        # get train set and test set
+        self.prepare_dataset()
 
         # Train modl
         model = RandomForestClassifier()
@@ -412,7 +433,24 @@ class HousePrice:
         st.write(model.get_params())
 
 
+
     def train_decision_tree(self):
+
+        # get train set and test set
+        self.prepare_dataset()
+
+        model = DecisionTreeRegressor()
+        model.fit(self.processed_X_train, self.y_train)
+        self.model = model
+
+        # default parameters
+        st.write(model.get_params())
+
+
+    def train_gradient_boosting(self):
+
+        # get train set and test set
+        self.prepare_dataset()
 
         model = DecisionTreeClassifier()
         model.fit(self.processed_X_train, self.y_train)
@@ -469,10 +507,7 @@ class HousePrice:
 
     def prediction(self):
         self.y_train_pred = self.model.predict(self.X_train)
-        self.prob_train_pred = self.model.predict_proba(self.X_train)
-
         self.y_test_pred = self.model.predict(self.X_test)
-        self.prob_test_pred = self.model.predict_proba(self.X_test)
 
 
     
