@@ -44,12 +44,17 @@ def app():
 	if task_option == 'Data Processing':
 		credit_risk = CreditRisk()
 		st.write("#### Raw data")
-		#credit_risk.load_dataset()
-		#st.write(credit_risk.X_train[credit_risk.SELECTED_VARS].head(10))
+		credit_risk.load_dataset()
+		st.write(credit_risk.data[credit_risk.SELECTED_VARS].head(10))
+		st.write(credit_risk.data_processing_pipeline(credit_risk.X_train, 1).head(10))
 
-		st.write("#### Prepocessed data")
-		credit_risk.prepare_dataset()
-		st.write(credit_risk.processed_X_train.head(10))
+		processed_X_train = credit_risk.data_processing_pipeline(credit_risk.X_train, 1)
+		df_train = pd.concat([processed_X_train, credit_risk.y_train], axis=1)
+		df_train.to_csv('credit_risk_train.csv', index=False)
+		processed_X_test = credit_risk.data_processing_pipeline(credit_risk.X_train, 0)
+		df_test = pd.concat([processed_X_test, credit_risk.y_test], axis=1)
+		df_test.to_csv('credit_risk_test.csv', index=False)
+
 	#=========================================== Data Processing =======================================
 
 

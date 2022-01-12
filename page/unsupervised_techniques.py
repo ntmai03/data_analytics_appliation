@@ -23,54 +23,74 @@ def app():
 
     st.sidebar.header('')
     st.sidebar.header('')
-    st.sidebar.subheader('Dimension Reduction')
-    reduction_type = ["Select Model",
-                      "PCA", 
-                      "SVD",
-                      "AutoEncoder",
-                      "Variational AutoEncoder",
-                      "TSNE",
-                      "LDA",
-                      "RBM",
-                      "SOM",
-                      "Probablistic Non MatrixFactorization"]
-    reduction_option = st.sidebar.selectbox('',reduction_type)
-    st.sidebar.header('')
+    task_type = ['Select Task',
+                 'Dimension Reduction',
+                 'Clustering',
+                 'Anomaly Detection',
+                 ]
+    task_option = st.sidebar.selectbox('', task_type)
     st.sidebar.header('')
 
 
-    st.sidebar.subheader('Clustering')
-    cluster_type = ["Select Model",
-                    "KMeans", 
-                    "Hierarchy",
-                    "DBScan",
-                    "Affinity",
-                    "GMM"]
-    cluster_option = st.sidebar.selectbox('',cluster_type)
-    st.sidebar.header('')
-    st.sidebar.header('')
+    #=========================================== Dimension Reduction ======================================
+    if task_option == 'Dimension Reduction':
+        reduction_type = ["Select Model",
+                          "PCA", 
+                          "SVD",
+                          "AutoEncoder",
+                          "SOM"]
+        reduction_option = st.sidebar.selectbox('',reduction_type)
+        st.sidebar.header('')
+        st.sidebar.header('')
 
-    model = UnsupervisedAnalysis()
-    model.load_digit_ds()
-    model.show_image()
+        # Load and show raw data
+        if reduction_option == 'Select Model':
+            st.markdown("#### Raw data:")
+            model = UnsupervisedAnalysis()
+            model.load_mnist_ds(flag=1)
+            # Display the first 5 digits
+            st.markdown('#### Display the first 5 digits of MNIST dataset')
+            model.show_image()
+
+        if reduction_option == 'PCA':
+            model = UnsupervisedAnalysis()
+            model.load_mnist_ds()   
+            model.pca_analysis()
+            model.pca_transform()   
+
+        if reduction_option == 'SVD':
+            model = UnsupervisedAnalysis()
+            model.load_mnist_ds()   
+            model.svd_analysis()
+            model.svd_transform()  
+
+        if reduction_option == 'AutoEncoder':
+            model = UnsupervisedAnalysis()
+            model.load_mnist_ds()   
+            model.autoencoder_analysis()
+            model.autoencoder_transform()         
 
 
-    if reduction_option == 'PCA':
-        model = UnsupervisedAnalysis()
-        model.load_digit_ds()     
-        model.pca_analysis(c=model.y)  
+    #=========================================== Clustering ======================================
+    if task_option == 'Clustering':
+        st.sidebar.subheader('Clustering')
+        cluster_type = ["Select Model",
+                        "KMeans", 
+                        "GMM",
+                        "Hierarchical"]
+        cluster_option = st.sidebar.selectbox('',cluster_type)
+        st.sidebar.header('')
 
-    if reduction_option == 'SVD':
-        model = UnsupervisedAnalysis()
-        model.load_digit_ds()     
-        model.svd_analysis(c=model.y)  
+        if cluster_option == 'KMeans':
+            model = UnsupervisedAnalysis()
+            model.load_mnist_ds()   
+            model.kmeans_analysis()
+  
+        if cluster_option == 'GMM':
+            model = UnsupervisedAnalysis()
+            model.load_mnist_ds()   
+            model.gmm_analysis()
 
-    if reduction_option == 'TSNE':
-        model = UnsupervisedAnalysis()
-        model.load_digit_ds()     
-        model.tsne_analysis(c=model.y)  
 
-    if cluster_option == 'Select Model':
-        model = UnsupervisedAnalysis()
-        model.load_digit_ds()     
-        model.clustering(n_clusters=10)          
+
+    #=========================================== Anomaly Detection ======================================    

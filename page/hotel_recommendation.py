@@ -19,8 +19,8 @@ def app():
     st.sidebar.header('')
     st.sidebar.header('')
     st.sidebar.header('')
-    st.sidebar.subheader('Select function')
-    task_type = ["Extract Data", 
+    task_type = ["Select function",
+                 "Extract Data", 
                  "Transform Data",
                  "Data Processing",
                  "Text Classification",
@@ -63,16 +63,52 @@ def app():
             Booking.create_review_file(city='paris')
 
 
+
+    if task_option == 'Data Processing':
+        source_type = ["Select Data Source",
+                          "London", 
+                          "Paris"]
+        source_option = st.sidebar.selectbox('',source_type)
+        source_dict = {'London':'london', 'Paris':'paris'}
+        st.sidebar.header('')
+        st.sidebar.header('')
+        if(source_option != 'Select Data Source'):
+            hotel = HotelRecommendation()
+            hotel.create_corpus(source_dict[source_option])
+
+
     if task_option == 'Topic Modeling':
-        st.sidebar.header('')
-        st.sidebar.header('')
-        st.sidebar.subheader('Dimension Reduction')
         source_type = ["Select Data Source",
                           "AirBnb", 
-                          "News"]
+                          "London",
+                          "Paris"]
         source_option = st.sidebar.selectbox('',source_type)
+        source_dict = {'London':'london', 'Paris':'paris'}
+        st.write()
+        st.sidebar.markdown('N of clusters')
+        n_clusters = st.sidebar.slider("",2, 10, 7, key="N_CLUSTERS")
+        st.sidebar.markdown('N of hidden nodes in the 1st layer')
+        encoding1_dim = st.sidebar.slider("",50, 100, 80, key="ENCODING1_DIM")
+        st.sidebar.markdown('N of hidden nodes in the 2nd layer')
+        encoding2_dim = st.sidebar.slider("",20, 50, 30, key="ENCODING2_DIM")
+        st.sidebar.markdown('N of hidden nodes in the 2nd layer')
+        latent_dim = st.sidebar.slider("",10, 20, 15, key="LATENT_DIM")
         st.sidebar.header('')
-        st.sidebar.header('')
+
+        if st.sidebar.button("Train"):
+            if(source_option != 'Select Data Source'):
+                hotel = HotelRecommendation()
+                hotel.train_autoencoder(source_dict[source_option], 
+                                        encoding1_dim, 
+                                        encoding2_dim, 
+                                        latent_dim, 
+                                        n_clusters)
+
+
+    if task_option == 'Hotel Recommendation':
+        st.write('HotelRecommendation')
+        hotel = HotelRecommendation()
+        hotel.hotel_recommendation()
 
 
     if task_option == 'Knowledge Graph':

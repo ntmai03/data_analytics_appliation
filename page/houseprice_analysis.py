@@ -5,6 +5,7 @@ import joblib
 import sys
 from pathlib import Path
 import os
+from io import BytesIO
 
 sys.path.append('src')
 from src import config as cf
@@ -27,24 +28,13 @@ def app():
 	if task_option == 'Introduction':
 		# https://docs.streamlit.io/library/get-started/create-an-app
 		st.write('Introduction')	
-		cat = ["bored", "happy", "bored", "bored", "happy", "bored"]
-		dog = ["happy", "happy", "happy", "happy", "bored", "bored"]
-		activity = ["combing", "drinking", "feeding", "napping", "playing", "washing"]
 
-		width = st.sidebar.slider("plot width", 1, 25, 3)
-		height = st.sidebar.slider("plot height", 1, 25, 1)
 
-		fig, ax = plt.subplots(figsize=(width, height))
-		ax.plot(activity, dog, label="dog")
-		ax.plot(activity, cat, label="cat")
-		ax.legend()
-
-		st.pyplot(fig)
 
 	if task_option == 'Data Snapshot':
 		# get data from s3
 		houseprice = HousePrice()
-		houseprice.prepare_dataset()
+		houseprice.load_dataset()
 		st.write("#### First 10 rows")
 		#df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_RAW_PATH + "kc_house_data.csv")
 		st.write(houseprice.data[houseprice.SELECTED_VARS].head(10))
@@ -52,12 +42,19 @@ def app():
 
 		houseprice.processed_X_train = houseprice.data_processing_pipeline(houseprice.X_train, 1)
 		# calculate the correlations using pandas corr and round the values to 2 decimals
-		corr_mat = houseprice.processed_X_train[['view','grade','lat','long']].corr().round(2)
+		corr_mat = houseprice.processed_X_train.corr().round(2)
 		# plot the correlation matrix using seaorn annot=True to print the correlation values inside the squares
 
-		fig, ax = plt.subplots(figsize=(1, 1))
+	
+		st.write("")	
+		col1, col2, col3 = st.columns([1, 6, 1])
+		fig, ax = plt.subplots(figsize=(15, 15))
 		sns.heatmap(data=corr_mat, annot=True, ax=ax)
-		st.write(fig)
+		ax.set_title("Correlation Matrix")
+		buf = BytesIO()
+		fig.savefig(buf, format="png")
+		col2.image(buf)
+
 
 		
 
@@ -65,21 +62,32 @@ def app():
 	if task_option == 'Predictive Model':
 		st.sidebar.subheader('')
 		st.sidebar.subheader('')
-		model_name = ['Linear Regression',
+		model_name = ['Select model...',
+					  'Linear Regression',
 					  'Decision Tree',
 					  'Random Forest',
 					  'Gradient Boosting Tree']
+		'''			  
 		houseprice = HousePrice()
-		houseprice.prepare_dataset()
+		houseprice.load_dataset()
 		houseprice.processed_X_train = houseprice.data_processing_pipeline(houseprice.X_train, 1)
 		houseprice.processed_X_test = houseprice.data_processing_pipeline(houseprice.X_test, 0)	
+		'''
+
 		model_option = st.sidebar.selectbox('', model_name)
 
 		if model_option == 'Linear Regression':
+			houseprice = HousePrice()
 			st.write('Linear Regression Model - Stats Model')
 			result = houseprice.train_regression_statsmodel()
 			st.write(result.summary())
 			st.write('--------------------------------------------------')
+
+		if model_option == 'Decision Tree':
+			houseprice = HousePrice()
+			st.markdown('Decision Tree')
+			houseprice.train_decision_tree()
+
 
 
 
