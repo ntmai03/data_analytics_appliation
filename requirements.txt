@@ -32,4 +32,3 @@ langdetect
 # for graph
 # networkx
 pyvis
-streamlit pyvis networkx
