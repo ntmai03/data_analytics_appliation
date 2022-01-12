@@ -11,6 +11,7 @@ from page import time_series
 from page import hotel_recommendation
 from page import unsupervised_techniques
 from page import credit_risk_analysis
+from page import shopping_recommendation
 
 # Config layout
 st.set_page_config(layout="wide", initial_sidebar_state="expanded")
@@ -48,9 +49,8 @@ app.add_page("01-House Price Data Analysis", houseprice_analysis.app)
 app.add_page("02-Credit Risk Analysis", credit_risk_analysis.app)
 app.add_page("03-Unsupervised Techniques", unsupervised_techniques.app)
 app.add_page("04-Time Series Data Analysis", time_series.app)
-app.add_page("05-Text Data Analysis", introduction.app)
-app.add_page("06-Hotel Recommendation", hotel_recommendation.app)
-app.add_page("07-Online Shopping Recommendation", introduction.app)
+app.add_page("05-Hotel Recommendation", hotel_recommendation.app)
+app.add_page("06-Online Shopping Recommendation", shopping_recommendation.app)
 
 # The main app
 app.run()
