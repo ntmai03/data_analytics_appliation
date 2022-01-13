@@ -2,6 +2,7 @@
 import sys
 from pathlib import Path
 import os
+from io import BytesIO
 
 import streamlit as st
 
@@ -16,6 +17,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set_style('whitegrid')
+
+from sklearn.tree import export_graphviz
+from graphviz import Source
+from IPython.display import Image
 
 # Preprocessing
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
@@ -51,7 +56,7 @@ import xgboost as xgb
 import joblib
 
 from src.util import data_manager as dm
-from src.util import regression_util as regu
+from src.util import regression_util as reu
 from src import config as cf
 
 
@@ -417,47 +422,159 @@ class HousePrice:
 
 
 
-
-
-    def train_random_forest(self):
+    def decision_tree_analysis(self, max_depth=5, max_features=10, min_samples_leaf=50):
 
         # get train set and test set
         self.prepare_dataset()
 
-        # Train modl
-        model = RandomForestClassifier()
+        model = DecisionTreeRegressor(max_depth=max_depth, 
+                                      max_features=max_features, 
+                                      min_samples_leaf=min_samples_leaf)
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # default parameters
+        # Model parameters
+        st.markdown('#### Hyper-parameters of model')
         st.write(model.get_params())
 
+        # Trees
+        st.markdown('#### Visualize the tree')
+        graph = Source(sklearn.tree.export_graphviz(
+                model,
+                #out_file="kchouse_tree.dot",
+                out_file=None,
+                feature_names=self.TRAIN_VARS,
+                class_names='price',
+                special_characters=False,
+                rounded=True,
+                filled=True,
+                max_depth=3
+            ))
+
+        png_data = graph.pipe(format='png')
+        with open('dtree_structure.png', 'wb') as f:
+            f.write(png_data)
+        st.image(png_data)
 
 
-    def train_decision_tree(self):
+        # important features
+        st.markdown('#### Feature Importance')
+        reu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
+
+        # prediction
+        pred_train = model.predict(self.processed_X_train)
+        pred_test = model.predict(self.processed_X_test)
+
+        # R-squared
+        train_score = model.score(self.processed_X_train, self.y_train)
+        test_score = model.score(self.processed_X_test, self.y_test)
+
+        # Performance metric
+        st.markdown('#### Performance metrics')
+        st.write('Train set')
+        reu.get_metrics(train_score, self.y_train, pred_train)
+        st.write('Test set')
+        reu.get_metrics(test_score, self.y_test, pred_test)
+
+        # examine residual plot
+        st.markdown('#### Assess the goodness of model fitting')
+        fig, axes = plt.subplots(2,4,figsize=(12,8))
+        reu.plot_residual(axes[0][0],axes[0][1],axes[0][2],axes[0][3],pred_train,self.y_train,'Decision Tree: {}'.format(train_score),'Residual plot for train data')
+        reu.plot_residual(axes[1][0],axes[1][1],axes[1][2],axes[1][3],pred_test,self.y_test,'Decision Tree: {}'.format(test_score),'Residual plot for test data')
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf)
+
+
+    def random_forest_analysis(self, max_depth=5, max_features=10, min_samples_leaf=50, n_estimators=300):
 
         # get train set and test set
         self.prepare_dataset()
 
-        model = DecisionTreeRegressor()
+        model = RandomForestRegressor(max_depth=max_depth, 
+                                      max_features=max_features, 
+                                      min_samples_leaf=min_samples_leaf,
+                                      n_estimators=n_estimators)
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # default parameters
+        # Model parameters
+        st.markdown('#### Hyper-parameters of model')
         st.write(model.get_params())
 
+        # important features
+        st.markdown('#### Feature Importance')
+        reu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
 
-    def train_gradient_boosting(self):
+        # prediction
+        pred_train = model.predict(self.processed_X_train)
+        pred_test = model.predict(self.processed_X_test)
+
+        # R-squared
+        train_score = model.score(self.processed_X_train, self.y_train)
+        test_score = model.score(self.processed_X_test, self.y_test)
+
+        # Performance metric
+        st.markdown('#### Performance metrics')
+        st.write('Train set')
+        reu.get_metrics(train_score, self.y_train, pred_train)
+        st.write('Test set')
+        reu.get_metrics(test_score, self.y_test, pred_test)
+
+        # examine residual plot
+        st.markdown('#### Assess the goodness of model fitting')
+        fig, axes = plt.subplots(2,4,figsize=(12,8))
+        reu.plot_residual(axes[0][0],axes[0][1],axes[0][2],axes[0][3],pred_train,self.y_train,'Decision Tree: {}'.format(train_score),'Residual plot for train data')
+        reu.plot_residual(axes[1][0],axes[1][1],axes[1][2],axes[1][3],pred_test,self.y_test,'Decision Tree: {}'.format(test_score),'Residual plot for test data')
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf)
+
+
+    def gbt_analysis(self, max_depth=5, max_features=10, min_samples_leaf=50, n_estimators=300):
 
         # get train set and test set
         self.prepare_dataset()
 
-        model = DecisionTreeClassifier()
+        model = GradientBoostingRegressor(max_depth=max_depth, 
+                                      max_features=max_features, 
+                                      min_samples_leaf=min_samples_leaf,
+                                      n_estimators=n_estimators)
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # default parameters
+        # Model parameters
+        st.markdown('#### Hyper-parameters of model')
         st.write(model.get_params())
+
+        # important features
+        st.markdown('#### Feature Importance')
+        reu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
+
+        # prediction
+        pred_train = model.predict(self.processed_X_train)
+        pred_test = model.predict(self.processed_X_test)
+
+        # R-squared
+        train_score = model.score(self.processed_X_train, self.y_train)
+        test_score = model.score(self.processed_X_test, self.y_test)
+
+        # Performance metric
+        st.markdown('#### Performance metrics')
+        st.write('Train set')
+        reu.get_metrics(train_score, self.y_train, pred_train)
+        st.write('Test set')
+        reu.get_metrics(test_score, self.y_test, pred_test)
+
+        # examine residual plot
+        st.markdown('#### Assess the goodness of model fitting')
+        fig, axes = plt.subplots(2,4,figsize=(12,8))
+        reu.plot_residual(axes[0][0],axes[0][1],axes[0][2],axes[0][3],pred_train,self.y_train,'Decision Tree: {}'.format(train_score),'Residual plot for train data')
+        reu.plot_residual(axes[1][0],axes[1][1],axes[1][2],axes[1][3],pred_test,self.y_test,'Decision Tree: {}'.format(test_score),'Residual plot for test data')
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf)
+
 
 
 

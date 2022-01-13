@@ -2,6 +2,7 @@
 import sys
 from pathlib import Path
 import os
+from io import BytesIO
 
 import streamlit as st
 
@@ -15,7 +16,10 @@ import pandas as pd
 # for plotting
 import matplotlib.pyplot as plt
 import seaborn as sns
-sns.set_style('whitegrid')
+
+from sklearn.tree import export_graphviz
+from graphviz import Source
+from IPython.display import Image
 
 # Preprocessing
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
@@ -47,6 +51,12 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticD
 from xgboost import XGBClassifier
 # to persist the model and the scaler
 import joblib
+
+# Evaluation metrics for Classification
+from sklearn.metrics import (confusion_matrix, classification_report, accuracy_score, roc_curve, 
+                             r2_score, roc_auc_score, f1_score, precision_score, recall_score, 
+                             precision_recall_curve, precision_recall_fscore_support, auc, 
+                             average_precision_score)
 
 from src.util import data_manager as dm
 from src.util import classification_util as clfu
@@ -110,6 +120,10 @@ class CreditRisk:
                   'home_ownership_MORTGAGE', 'home_ownership_NONE', 'home_ownership_OTHER', 
                   'home_ownership_OWN', 'home_ownership_RENT', 'verification_status_Source Verified', 
                   'verification_status_Verified', 'initial_list_status_w']
+
+    TRAIN_NUM_VARS = ['loan_amnt', 'term', 'int_rate', 'annual_inc', 'dti', 'delinq_2yrs', 'inq_last_6mths',
+                      'open_acc', 'pub_rec', 'revol_bal', 'revol_util', 'total_acc', 'num_emp_length',
+                      'num_of_days', 'sub_grade_ratio', 'purpose_ratio', 'zip_code_ratio']
                   
 
     ##############################################################################################
@@ -412,18 +426,18 @@ class CreditRisk:
         st.write('--------------------------------------------------')
 
 
-    def train_logistic_regression_sklearn(self):
+    def logistic_regression_analysis(self, threshold=0.2):
 
         # get train set and test set
         self.prepare_dataset()
 
         # Train model
-        model = LogisticRegression(C=99999)
+        model = LogisticRegression(C=1e9, solver='lbfgs')
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
         # Result Summary Table
-        st.write('Risk Ratio')
+        st.markdown('#### Result Summary Table')
         summary_table = pd.DataFrame(columns=['FeatureName'], data=self.TRAIN_VARS)
         summary_table['Coefficient'] = np.transpose(model.coef_)
         summary_table.index = summary_table.index + 1
@@ -433,13 +447,86 @@ class CreditRisk:
         st.write(summary_table)
         st.write('--------------------------------------------------')
 
-        st.write('Feature Selection')
-        #model.logistic_regression_important_feature()
+        # Prediction
+        self.prediction()
+
+        # prediction with threshold
+        self.pred_train = np.where(self.prob_train[:,1] > threshold, 1, 0)       
+        self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0)   
+
+        # Performance Evaluation
+        st.markdown("#### Performance Evaluation")
+
+        # Confusion matrix
+        st.write('Confusion Matrix')
+        fig, ax = plt.subplots(1,2,figsize=(8,4))
+        sns.heatmap(clfu.create_confusion_matrix(self.y_train, self.pred_train), annot=True, fmt='d', ax=ax[0])
+        sns.heatmap(clfu.create_confusion_matrix(self.y_test, self.pred_test), annot=True, fmt='d', ax=ax[1])
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf)
+
+        # Classification report
+        st.write('Train data')
+        st.write(classification_report(self.y_train, self.pred_train))
+        st.write('Test data')
+        st.write(classification_report(self.y_test, self.pred_test))
+
+        # ROC Curve and ROC-AUC
+        clfu.plot_roc_auc(self.y_train, self.prob_train, self.y_test, self.prob_test)
+
+        # select threshold
+        st.markdown("#### Select threshold")
+        # Recall and Decision Boundary T
+        st.write('Recall and Decision Boundary T')
+        train_precision_0, train_precision_1, train_recall_0, train_recall_1 = clfu.precision_recall_threshold(self.prob_train, self.y_train)
+        test_precision_0, test_precision_1, test_recall_0, test_recall_1 = clfu.precision_recall_threshold(self.prob_test, self.y_test)
+        fig, ax = plt.subplots(1,2,figsize=(12,4.5))
+        clfu.plot_recall_vs_decision_boundary(ax[0], train_recall_0, train_recall_1, threshold)
+        clfu.plot_recall_vs_decision_boundary(ax[1], test_recall_0, test_recall_1, threshold)
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf)
+
+        # Precision-Recall curve
+        st.write('Precision-Recall curve')
+        fig, ax = plt.subplots(1,2,figsize=(12,4.5))
+        clfu.plot_precision_recall_curve(ax[0], self.y_train, self.prob_train[:,1])
+        clfu.plot_precision_recall_curve(ax[1], self.y_test, self.prob_test[:,1])
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf)
+
+
+
+    def lasso_analysis(self):
+
+        # get train set and test set
+        self.prepare_dataset()
+
+        # Train model
+        model = LogisticRegression(penalty='l1', solver='liblinear')
+        model.fit(self.processed_X_train, self.y_train)
+        self.model = model
+
+        # Result Summary Table
+        st.markdown('#### Result Summary Table')
+        summary_table = pd.DataFrame(columns=['FeatureName'], data=self.TRAIN_VARS)
+        summary_table['Coefficient'] = np.transpose(model.coef_)
+        summary_table.index = summary_table.index + 1
+        summary_table = summary_table.sort_index()
+        summary_table['OddsRatio'] = np.exp(np.abs(summary_table.Coefficient))
+        summary_table = summary_table.sort_values('OddsRatio', ascending=False)
+        st.write(summary_table)
         st.write('--------------------------------------------------')
 
-        st.write('Performance Evaluation')
+        # Prediction
+        self.prediction()
+
+        # Performance Evaluation
+        st.markdown("#### Performance Evaluation")
         self.evaluate_performance()
-        st.write('--------------------------------------------------')
+
 
     
     def features_importance(self):
@@ -459,120 +546,211 @@ class CreditRisk:
         st.write(backward_selection_features)
 
 
-    def train_random_forest(self):
+    def random_forest_analysis(self, max_depth=8, max_features=10, min_samples_leaf=50, n_estimators=300):
 
         # get train set and test set
         self.prepare_dataset()
 
         # Train model
-        model = RandomForestClassifier()
+        model = RandomForestClassifier(max_depth=max_depth, 
+                                      max_features=max_features, 
+                                      min_samples_leaf=min_samples_leaf,
+                                      n_estimators=n_estimators)
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # model's parameters
+        # Model parameters
+        st.markdown('#### Hyper-parameters of model')
         st.write(model.get_params())
 
-        st.write('Performance Evaluation')
+        # important features
+        st.markdown('#### Feature Importance')
+        clfu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
+
+        # Performance Evaluation
         self.evaluate_performance()
-        st.write('--------------------------------------------------')
-
-        # store model
 
 
-
-    def train_decision_tree(self):
+    def decision_tree_analysis(self, max_depth=8, max_features=10, min_samples_leaf=50):
 
         # get train set and test set
         self.prepare_dataset()
 
-        model = DecisionTreeClassifier()
+        model = DecisionTreeClassifier(max_depth=max_depth, 
+                                      max_features=max_features, 
+                                      min_samples_leaf=min_samples_leaf)
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # default parameters
+        # Model parameters
+        st.markdown('#### Hyper-parameters of model')
         st.write(model.get_params())
 
-        st.write('Performance Evaluation')
+        # Trees
+        st.markdown('#### Visualize the tree')
+        graph = Source(sklearn.tree.export_graphviz(
+                model,
+                out_file=None,
+                feature_names=self.TRAIN_VARS,
+                class_names=['No Default', 'Default'],
+                special_characters=False,
+                rounded=True,
+                filled=True,
+                max_depth=3
+            ))
+
+        png_data = graph.pipe(format='png')
+        with open('dtree_structure.png', 'wb') as f:
+            f.write(png_data)
+        st.image(png_data)
+
+        # important features
+        st.markdown('#### Feature Importance')
+        clfu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
+
+        # Performance Evaluation
         self.evaluate_performance()
-        st.write('--------------------------------------------------')
-
-        # store model
 
 
-    def train_xgboost(self):
+    def xgboost_analysis(self, max_depth=8, max_features=10, min_samples_leaf=50, n_estimators=300):
 
         # get train set and test set
         self.prepare_dataset()
 
-        model = XGBClassifier()
+        # Train model
+        model = XGBClassifier(max_depth=max_depth, 
+                                      max_features=max_features, 
+                                      min_samples_leaf=min_samples_leaf,
+                                      n_estimators=n_estimators)
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # default parameters
+        # Model parameters
+        st.markdown('#### Hyper-parameters of model')
         st.write(model.get_params())
 
-        st.write('Performance Evaluation')
+        # important features
+        st.markdown('#### Feature Importance')
+        clfu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
+
+        # Performance Evaluation
         self.evaluate_performance()
-        st.write('--------------------------------------------------')
-
-        # store model
 
 
-    def train_knn(self):
+    def knn_analysis(self, n_neighbors=5):
 
         # get train set and test set
         self.prepare_dataset()
 
-        model = KNeighborsClassifier()
+        model = KNeighborsClassifier(n_neighbors=n_neighbors, metric='minkowski', p=2)
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # default parameters
+        # Model parameters
+        st.markdown('#### Hyper-parameters of model')
         st.write(model.get_params())
 
-        st.write('Performance Evaluation')
+        # Performance Evaluation
         self.evaluate_performance()
-        st.write('--------------------------------------------------')
 
-        # store model
+        # select k values
+        error_rate = []
+        for i in range(10, 20):
+            knn_model = KNeighborsClassifier(n_neighbors=i)
+            knn_model.fit(self.processed_X_train, self.y_train)
+            pred_i = knn_model.predict(self.processed_X_test)
+            error_rate.append(np.mean(pred_i != self.y_test))
+
+        # plotting
+        st.markdown('#### Select number of neighbors')
+        fig, ax = plt.subplots(1,1,figsize=(8,5))
+        ax.plot(range(1,50, error_rate, color='blue', linestyle='dashed', marker='o', markerfacecolor='red', markersize=10))
+        plt.title('Error rate vs. K-value')
+        plt.xlabel('K')
+        plt.ylabel('Error Rate')
 
 
-    def train_gradient_boosting(self):
+    def gradient_boosting_analysis(self, max_depth=8, max_features=10, min_samples_leaf=50, n_estimators=300):
 
         # get train set and test set
         self.prepare_dataset()
 
-        model = GradientBoostingClassifier()
+        # Train model
+        model = GradientBoostingClassifier(max_depth=max_depth, 
+                                      max_features=max_features, 
+                                      min_samples_leaf=min_samples_leaf,
+                                      n_estimators=n_estimators)
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # default parameters
+        # Model parameters
+        st.markdown('#### Hyper-parameters of model')
         st.write(model.get_params())
 
-        st.write('Performance Evaluation')
+        # important features
+        st.markdown('#### Feature Importance')
+        clfu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
+
+        # Performance Evaluation
         self.evaluate_performance()
-        st.write('--------------------------------------------------')
-
-        # store model
 
 
-    def train_GaussianNB(self):
+    def GaussianNB_analysis(self):
 
         # get train set and test set
         self.prepare_dataset()
+        self.processed_X_train = self.processed_X_train[self.TRAIN_NUM_VARS]
+        self.processed_X_test = self.processed_X_test[self.TRAIN_NUM_VARS]
 
         model = GaussianNB()
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # default parameters
+        # Model parameters
+        st.markdown('#### Hyper-parameters of model')
         st.write(model.get_params())
 
-        st.write('Performance Evaluation')
+        # Performance Evaluation
         self.evaluate_performance()
-        st.write('--------------------------------------------------')
 
-        # store model
+
+    def lda_analysis(self):
+
+        # get train set and test set
+        self.prepare_dataset()
+        self.processed_X_train = self.processed_X_train[self.TRAIN_NUM_VARS]
+        self.processed_X_test = self.processed_X_test[self.TRAIN_NUM_VARS]
+
+        model = LinearDiscriminantAnalysis()
+        model.fit(self.processed_X_train, self.y_train)
+        self.model = model
+
+        # Model parameters
+        st.markdown('#### Hyper-parameters of model')
+        st.write(model.get_params())
+
+        # Performance Evaluation
+        self.evaluate_performance()
+
+
+    def qda_analysis(self):
+
+        # get train set and test set
+        self.prepare_dataset()
+        self.processed_X_train = self.processed_X_train[self.TRAIN_NUM_VARS]
+        self.processed_X_test = self.processed_X_test[self.TRAIN_NUM_VARS]
+
+        model = QuadraticDiscriminantAnalysis()
+        model.fit(self.processed_X_train, self.y_train)
+        self.model = model
+
+        # Model parameters
+        st.markdown('#### Hyper-parameters of model')
+        st.write(model.get_params())
+
+        # Performance Evaluation
+        self.evaluate_performance()
+
 
     ##############################################################################################
     # Feature Selection
@@ -625,13 +803,12 @@ class CreditRisk:
 
         # model prediction
         self.prediction()
-        st.write('Train data')
+        st.markdown('#### Performance Evaluation for Train data')
         clfu.display_model_performance_metrics(true_labels=self.y_train, 
                                                predicted_labels=self.pred_train, 
                                                predicted_prob = self.prob_train[:,1])
-        st.write('')
-        st.write('Test data')
-        st.write(self.pred_test[0:10])
+        st.write('-'*30)
+        st.markdown('#### Performance Evaluation for Test data')
         clfu.display_model_performance_metrics(true_labels=self.y_test, 
                                                predicted_labels=self.pred_test, 
                                                predicted_prob = self.prob_test[:,1])
