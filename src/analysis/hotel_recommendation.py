@@ -261,6 +261,7 @@ class HotelRecommendation:
         
         pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/airbnb_pretrained_model.pkl')
         pretrained_model.train(tokenized_corpus, total_examples=pretrained_model.corpus_count, epochs = 5)
+        joblib.dump(pretrained_model, cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
 
         embeddings =  self.vectorize(corpus_df['text_clean'], pretrained_model)
         embeddings_df = pd.DataFrame(embeddings)
@@ -411,10 +412,14 @@ class HotelRecommendation:
 
 
     
-    def generate_graph_data(self, listing_id, cluster_id):
-        filename = 'airbnb_cluster' + str(cluster_id) + '.csv'
-        house_df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + filename)
-        house_df = house_df[house_df.listing_id == listing_id].reset_index()
+    def generate_graph_data(self, city, listing_id, cluster_id):
+        #filename = 'airbnb_cluster' + str(cluster_id) + '.csv'
+        filename = city + '/booking_cluster_df.csv'
+        house_df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_BOOKING + filename)
+        house_df = house_df[house_df.listing_id == listing_id].reset_index(drop=True)
+        house_df = house_df[house_df.Cluster == cluster_id].reset_index(drop=True)
+        st.write(house_df.shape)
+        st.write(house_df.head())
 
         house_obj1 = []
         house_obj2 = []
@@ -496,9 +501,9 @@ class HotelRecommendation:
         components.html(HtmlFile.read(), height=1000)
 
 
-    def generate_graph(self, listing_id, cluster_id, entities):
+    def generate_graph_booking(self, city, listing_id, cluster_id, entities):
         
-        graph_df = self.generate_graph_data(listing_id, cluster_id)
+        graph_df = self.generate_graph_data(city, listing_id, cluster_id)
         entity_list = self.extract_entities(graph_df)
         if(len(entities) == 0):
             entities = entity_list
@@ -588,6 +593,8 @@ class HotelRecommendation:
         st.write(ae_embeddings.shape)
         st.write(ae_embeddings.head())
 
+        keras.models.save_model(autoencoder, city + "_booking_autoencoder_model.h5")
+
 
         kmeans = KMeans(n_clusters=n_clusters, random_state=10)
         kmeans.fit(ae_embeddings)
@@ -617,8 +624,20 @@ class HotelRecommendation:
 
         )  
 
+        ae_embedding_buffer = StringIO()
+        ae_embeddings.to_csv(ae_embedding_buffer)
+        cf.S3_CLIENT.put_object(
+            Bucket=cf.S3_DATA_PATH,
+            Key=cf.S3_DATA_BOOKING + city + '/booking_ae_embedding_df.csv',
+            Body = ae_embedding_buffer.getvalue()
 
-    def topic_modelding(self):
+        )  
+
+
+
+    def topic_modeling_booking(self):
+
+        ae_embeddings = dm.s3_load_csv(cf.S3_DATA_PATH,  cf.S3_DATA_BOOKING + city + '/booking_ae_embedding_df.csv')
 
         kmeans = KMeans(n_clusters=n_clusters, random_state=10)
         kmeans.fit(ae_embeddings)
@@ -649,11 +668,15 @@ class HotelRecommendation:
         )        
 
 
-    def load_stacked_ae_data(self):
-        ae_embeddings = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'X_train_tsne_with_cluster.csv')
+    def topic_modeling_airbnb(self):
+        ae_embeddings = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'airbnb_ae_embeddings.csv')
         st.write(ae_embeddings.head())
         X_train_tsne = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'X_train_tsne_with_cluster.csv')
         plot_cluster(X_train_tsne[['0','1']].values, X_train_tsne['KMeans_cluster'], 7) 
+
+        corpus_cluster_df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'airbnb_cluster_df.csv')
+        self.show_cluster(corpus_cluster_df, 7)
+
 
 
 
@@ -681,9 +704,7 @@ class HotelRecommendation:
 
 
     def show_cluster(self, corpus_cluster_df, n_clusters):
-        #corpus_cluster_df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'airbnb_cluster_df.csv')
         st.write(corpus_cluster_df.head())
-        
         n_records = 5
         for i in range(0, n_clusters):          
             st.write(i)
@@ -735,6 +756,63 @@ class HotelRecommendation:
         sim_df['count'+ str(topic)] = similarity_df.groupby(['listing_id']).listing_id.count().values
         #sim_df = sim_df.sort_values('score', ascending=False)
         return sim_df
+
+
+
+
+    def hotel_recommendation_booking(self, city, 
+                                    cluster0='', 
+                                    cluster1='', 
+                                    cluster2='', 
+                                    cluster3='', 
+                                    cluster4='', 
+                                    cluster5='', 
+                                    cluster6=''):
+
+        train_vars = range(0,15)
+        train_vars = [str(var) for var in train_vars]
+
+        corpus_df = dm.s3_load_csv(cf.S3_DATA_PATH,  cf.S3_DATA_BOOKING + city + '/corpus_df.csv')
+        pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
+        ae_embeddings = dm.s3_load_csv(cf.S3_DATA_PATH,  cf.S3_DATA_BOOKING + city + '/booking_ae_embedding_df.csv')
+
+        autoencoder = keras.models.load_model(city + "_booking_autoencoder_model.h5")
+        encoder_layer = Model(autoencoder.input, autoencoder.layers[-4].output)
+
+        df0 = self.calculate_similarity(cluster0, pretrained_model, ae_embeddings[train_vars], corpus_df, encoder_layer)
+        df1 = self.calculate_similarity(cluster1, pretrained_model, ae_embeddings[train_vars], corpus_df, encoder_layer)
+        df2 = self.calculate_similarity(cluster2, pretrained_model, ae_embeddings[train_vars], corpus_df, encoder_layer)
+        df3 = self.calculate_similarity(cluster3, pretrained_model, ae_embeddings[train_vars], corpus_df, encoder_layer)
+        df4 = self.calculate_similarity(cluster4, pretrained_model, ae_embeddings[train_vars], corpus_df, encoder_layer)
+        df5 = self.calculate_similarity(cluster5, pretrained_model, ae_embeddings[train_vars], corpus_df, encoder_layer)
+        df6 = self.calculate_similarity(cluster6, pretrained_model, ae_embeddings[train_vars], corpus_df, encoder_layer)
+
+        sim0_df = self.avg_similarity(df0, 0)
+        sim1_df = self.avg_similarity(df1, 1)
+        sim2_df = self.avg_similarity(df2, 2)
+        sim3_df = self.avg_similarity(df3, 3)
+        sim4_df = self.avg_similarity(df4, 4)
+        sim5_df = self.avg_similarity(df5, 5)
+        sim6_df = self.avg_similarity(df6, 6)
+
+        sum_sim_df = pd.DataFrame(corpus_df['listing_id'].unique(), columns =['listing_id'])
+        sum_sim_df = sum_sim_df.merge(sim0_df, how='left', left_on='listing_id', right_on='listing_id')
+        sum_sim_df = sum_sim_df.merge(sim1_df, how='left', left_on='listing_id', right_on='listing_id')
+        sum_sim_df = sum_sim_df.merge(sim2_df, how='left', left_on='listing_id', right_on='listing_id')
+        sum_sim_df = sum_sim_df.merge(sim3_df, how='left', left_on='listing_id', right_on='listing_id')
+        sum_sim_df = sum_sim_df.merge(sim4_df, how='left', left_on='listing_id', right_on='listing_id')
+        sum_sim_df = sum_sim_df.merge(sim5_df, how='left', left_on='listing_id', right_on='listing_id')
+        sum_sim_df = sum_sim_df.merge(sim6_df, how='left', left_on='listing_id', right_on='listing_id')
+
+        sum_sim_df.fillna(0, inplace=True)
+        sum_sim_df['avg_sim'] = sum_sim_df[['score0', 'score1', 'score2', 'score3', 'score4','score5','score6']].mean(axis=1)
+        sum_sim_df['avg_count'] = sum_sim_df[['count0', 'count1', 'count2', 'count3', 'count4','count5','count6']].mean(axis=1)
+        sum_sim_df['total_score'] = sum_sim_df['avg_sim'] * sum_sim_df['avg_count']
+        sum_sim_df = sum_sim_df.sort_values(['avg_sim'], ascending=False)
+        st.write(sum_sim_df.shape)
+        st.write(sum_sim_df.head(20))
+
+
 
 
     def hotel_recommendation(self, cluster0='', 
