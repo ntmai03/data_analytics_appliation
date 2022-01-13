@@ -70,6 +70,7 @@ from nltk.tokenize import RegexpTokenizer
 nltk.download('stopwords')
 nltk.download('punkt')
 nltk.download('wordnet')
+nltk.download('omw-1.4')
 
 
 # deep learning library
