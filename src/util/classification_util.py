@@ -2,17 +2,24 @@ import sys
 import os
 from pathlib import Path
 import boto3
-
 import streamlit as st
+from io import BytesIO
 
 import pandas as pd
 import numpy as np
 # split data
 from sklearn.model_selection import train_test_split
 
-
+# statsmodels
+import pylab
+import scipy.stats as stats
 import statsmodels.api as sm
-import sklearn
+import statsmodels as statm
+import statsmodels.formula.api as smf
+from statsmodels.formula.api import ols
+import math
+from math import sqrt
+
 # for Classification models
 from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
 from sklearn.tree import DecisionTreeClassifier
@@ -25,6 +32,10 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticD
 from xgboost import XGBClassifier
 # to persist the model and the scaler
 import joblib
+
+# for plotting
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from src.util import data_manager as dm
 from src.util import classification_util as clfu
@@ -50,19 +61,20 @@ def plot_roc_auc(y_train, prob_train_pred, y_test, prob_test_pred):
     fpr_train, tpr_train, threshold = roc_curve(y_train, prob_train_pred[:,1])
     fpr_test, tpr_test, threshold = roc_curve(y_test, prob_test_pred[:,1])
     
-    fig = plt.figure(figsize=(6,6))
+    fig, ax = plt.subplots(1,1,figsize=(5,5))
     plt.title('ROC Curve Classifiers', fontsize=16)
-    plt.plot(fpr_train, tpr_train, label='Train Score: {:.4f}'.format(roc_auc_score(y_train, prob_train_pred[:,1])))
-    plt.plot(fpr_test, tpr_test, label='Test Score: {:.4f}'.format(roc_auc_score(y_test, prob_test_pred[:,1])))
-    plt.plot([0,1], [0,1], 'k--')
+    ax.plot(fpr_train, tpr_train, label='Train Score: {:.4f}'.format(roc_auc_score(y_train, prob_train_pred[:,1])))
+    ax.plot(fpr_test, tpr_test, label='Test Score: {:.4f}'.format(roc_auc_score(y_test, prob_test_pred[:,1])))
+    ax.plot([0,1], [0,1], 'k--')
     plt.axis([-0.01, 1, 0, 1])
     plt.xlabel('False Positive Rate', fontsize=16)
     plt.ylabel('True Positive Rate', fontsize=16)
     plt.annotate('Minimum ROC Score of 50% \n (This is the minimum score to get)',
                  xy=(0.5, 0.5), xytext=(0.6, 0.3), arrowprops=dict(facecolor='#6E726D', shrink=0.05))
     plt.legend()
-
-    return fig 
+    buf = BytesIO()
+    fig.savefig(buf, format="png")
+    st.image(buf)
 
 
 def plot_average_precision(label, y_score):
@@ -111,12 +123,10 @@ def split_data(X, y, test_size=0.2, random_state=0):
 
 def get_metrics(true_labels, predicted_labels, predicted_prob):
 
-    st.write('Test function')
-    
-    st.write('Accuracy:', np.round(accuracy_score(true_labels, predicted_labels),4))
-    st.write('Precision:', np.round(precision_score(true_labels, predicted_labels,average='weighted'),4))
-    st.write('Recall:', np.round(recall_score(true_labels,predicted_labels,average='weighted'),4))
-    st.write('F1 Score:', np.round(f1_score(true_labels,predicted_labels,average='weighted'),4))
+    #st.write('Accuracy:', np.round(accuracy_score(true_labels, predicted_labels),4))
+    #st.write('Precision:', np.round(precision_score(true_labels, predicted_labels,average='weighted'),4))
+    #st.write('Recall:', np.round(recall_score(true_labels,predicted_labels,average='weighted'),4))
+    #st.write('F1 Score:', np.round(f1_score(true_labels,predicted_labels,average='weighted'),4))
     st.write('ROC-AUC: {}'.format(np.round(roc_auc_score(true_labels, predicted_prob),4)))                   
 
 def train_predict_model(classifier, 
@@ -150,12 +160,70 @@ def display_classification_report(true_labels, predicted_labels, classes=[0,1]):
     
     
 def display_model_performance_metrics(true_labels, predicted_labels, predicted_prob, classes=[0,1]):
-    st.write('Model Performance metrics:')
-    st.write('-'*30)
+    #st.write('Model Performance metrics:')
     get_metrics(true_labels=true_labels, predicted_labels=predicted_labels, predicted_prob=predicted_prob)
     st.write('\nModel Classification report:')
-    st.write('-'*30)
     display_classification_report(true_labels=true_labels, predicted_labels=predicted_labels, classes=classes)
     st.write('\nPrediction Confusion Matrix:')
-    st.write('-'*30)
     display_confusion_matrix(true_labels=true_labels, predicted_labels=predicted_labels, classes=classes)
+
+
+def feature_importance(feature_importance, TRAIN_VARS):
+    feature_importance = pd.Series(np.abs(feature_importance))
+    feature_importance.index = TRAIN_VARS
+    feature_importance.sort_values(inplace=True,ascending=True)
+
+    fig, axes = plt.subplots(1,2,figsize=(6,7))
+    feature_importance.plot.barh()
+    plt.ylabel('Multivariate Linear Regression')
+    plt.title('Feature Importance')
+    buf = BytesIO()
+    fig.savefig(buf, format="png")
+    st.image(buf)
+
+
+def precision_recall_threshold(pred_proba, label):
+    t_recall_0, t_recall_1 = [], []
+    t_precision_0, t_precision_1 = [], []
+    
+    for threshold in np.arange(0, 1, 0.01):
+        precision, recall, fscore, support = \
+            precision_recall_fscore_support(label, np.where(pred_proba[:,1] > threshold, 1, 0))
+        recall_0, recall_1 = recall
+        precision_0, precision_1 = precision
+            
+        t_recall_0.append(recall_0)
+        t_recall_1.append(recall_1)
+        t_precision_0.append(precision_0)
+        t_precision_1.append(precision_1)
+    return t_precision_0, t_precision_1, t_recall_0, t_recall_1
+
+
+def plot_recall_vs_decision_boundary(ax, t_recall_1,t_recall_0,threshold):
+    ax.plot(np.arange(0,1,0.01), t_recall_1, label='Class1')
+    ax.plot(np.arange(0,1,0.01), t_recall_0, label='Class0')
+    ax.plot([.5, .5], [0,1], 'k--')
+    ax.plot([threshold, threshold], [0,1], 'k--')
+    plt.ylim([0.0, 1.01])
+    plt.xlim([0.0, 1.01])
+    ax.legend(loc='upper left', fontsize = 14)
+    ax.set_title('Recall vs. Decision Boundary\n'
+              'using Logistic Regression Classifier',
+              fontsize=14)
+    ax.set_xlabel('Decision Boundary (T)', fontsize=14)
+    ax.set_ylabel('Recall Rate', fontsize=14)
+    plt.tick_params(axis='both', which='major', labelsize=14)
+
+    return ax
+
+
+def plot_precision_recall_curve(ax, label, y_score):
+    
+    precision, recall, threshold = precision_recall_curve(label, y_score)
+
+    ax.plot(threshold, precision[1:], label='Precision', linewidth=3)
+    ax.plot(threshold, recall[1:], label='Recall', linewidth=3)
+    ax.set_title('Precision and recall for different threshold values')
+    ax.set_xlabel('Threshold')
+    ax.set_ylabel('Precision/Recall')
+    ax.legend()

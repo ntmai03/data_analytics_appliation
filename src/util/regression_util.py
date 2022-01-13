@@ -2,12 +2,40 @@ import sys
 import os
 from pathlib import Path
 import boto3
+import streamlit as st
+from io import BytesIO
 
 import pandas as pd
+import numpy as np
 # split data
 from sklearn.model_selection import train_test_split
 
-#sys.path.append('src')
+# statsmodels
+import pylab
+import scipy.stats as stats
+import statsmodels.api as sm
+import statsmodels as statm
+import statsmodels.formula.api as smf
+from statsmodels.formula.api import ols
+import math
+from math import sqrt
+
+# Regression
+from sklearn.linear_model import LinearRegression,Ridge,Lasso,RidgeCV,ElasticNet,LogisticRegression
+from sklearn.ensemble import RandomForestRegressor,BaggingRegressor,GradientBoostingRegressor,AdaBoostRegressor
+from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neural_network import MLPRegressor
+from xgboost import XGBRegressor
+# Evaluation metrics for Regression 
+from sklearn import metrics
+from sklearn.metrics import mean_squared_log_error, mean_squared_error, r2_score, mean_absolute_error, explained_variance_score
+from sklearn.svm import SVR
+import xgboost as xgb
+
+# for plotting
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 import config as cf
 
@@ -122,3 +150,24 @@ def split_data(X, y, test_size=0.2, random_state=0):
 
     return X_train, X_test, y_train, y_test
     
+
+def get_metrics(rsquare, y, pred):
+
+    st.write('R-squared:', np.round(rsquare,4))
+    st.write('MSE:', np.round(mean_squared_error(y, pred),4))
+    st.write('RMSE:', np.round(sqrt(mean_squared_error(y, pred)),4))
+
+
+
+def feature_importance(feature_importance, TRAIN_VARS):
+    feature_importance = pd.Series(np.abs(feature_importance))
+    feature_importance.index = TRAIN_VARS
+    feature_importance.sort_values(inplace=True,ascending=True)
+
+    fig, axes = plt.subplots(1,2,figsize=(6,7))
+    feature_importance.plot.barh()
+    plt.ylabel('Multivariate Linear Regression')
+    plt.title('Feature Importance')
+    buf = BytesIO()
+    fig.savefig(buf, format="png")
+    st.image(buf)
