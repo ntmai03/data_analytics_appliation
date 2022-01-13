@@ -84,11 +84,41 @@ def app():
 			st.write('--------------------------------------------------')
 
 		if model_option == 'Decision Tree':
-			houseprice = HousePrice()
-			st.markdown('Decision Tree')
-			houseprice.train_decision_tree()
+			st.sidebar.markdown('max_depth')
+			max_depth = st.sidebar.slider("",1, 50, 8, key="MAX_DEPTH")
+			st.sidebar.markdown('max_features')
+			max_features = st.sidebar.slider("",5, 20, 10, key="MAX_FEATURES")
+			st.sidebar.markdown('min_samples_leaf')
+			min_samples_leaf = st.sidebar.slider("",10, 50, 30, key="MIN_SAMPLES_LEAF")
+			st.sidebar.header('')
+			if st.sidebar.button("Train"):
+				houseprice = HousePrice()
+				houseprice.decision_tree_analysis(max_depth, max_features, min_samples_leaf)
+
+		if model_option == 'Random Forest':
+			st.sidebar.markdown('max_depth')
+			max_depth = st.sidebar.slider("",1, 20, 8, key="MAX_DEPTH")
+			st.sidebar.markdown('max_features')
+			max_features = st.sidebar.slider("",5, 20, 10, key="MAX_FEATURES")
+			st.sidebar.markdown('min_samples_leaf')
+			min_samples_leaf = st.sidebar.slider("",50, 200, 30, key="MIN_SAMPLES_LEAF")
+			st.sidebar.header('')
+			if st.sidebar.button("Train"):
+				houseprice = HousePrice()
+				houseprice.random_forest_analysis(max_depth, max_features, min_samples_leaf)
 
 
+		if model_option == 'Gradient Boosting Tree':
+			st.sidebar.markdown('max_depth')
+			max_depth = st.sidebar.slider("",1, 20, 8, key="MAX_DEPTH")
+			st.sidebar.markdown('max_features')
+			max_features = st.sidebar.slider("",5, 20, 10, key="MAX_FEATURES")
+			st.sidebar.markdown('min_samples_leaf')
+			min_samples_leaf = st.sidebar.slider("",50, 200, 30, key="MIN_SAMPLES_LEAF")
+			st.sidebar.header('')
+			if st.sidebar.button("Train"):
+				houseprice = HousePrice()
+				houseprice.gbt_analysis(max_depth, max_features, min_samples_leaf)
 
 
 	if task_option == 'Prediction':

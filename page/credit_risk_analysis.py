@@ -65,9 +65,12 @@ def app():
 		st.sidebar.subheader('')
 		model_name = ['Select model',
 					  'Logistic Regression',
+					  'Lasso Regression',
 					  'Decision Tree',
 					  'KNN',
 					  'Naive Bayes',
+					  'LDA',
+					  'QDA',					
 					  'Random Forest',
 					  'Gradient Boosting Tree',
 					  'Xgboost',
@@ -75,41 +78,84 @@ def app():
 		model_option = st.sidebar.selectbox('', model_name)
 
 		if model_option == 'Logistic Regression':
+			threshold = st.sidebar.slider("",0.05, 0.95, 0.5, key="THRESHOLD")
+			if st.sidebar.button("Select threshold"):
+				credit_risk = CreditRisk()
+				#credit_risk.train_logistic_regression_statsmodel()
+				#st.write('--------------------------------------------------')
+				credit_risk.logistic_regression_analysis(threshold)
+
+		if model_option == 'Lasso Regression':
 			credit_risk = CreditRisk()
-			st.write('Logistic Regression')
-			credit_risk.train_logistic_regression_statsmodel()
-			st.write('--------------------------------------------------')
-			credit_risk.train_logistic_regression_sklearn()
+			credit_risk.lasso_analysis()
 		
 		if model_option == 'Decision Tree':
-			credit_risk = CreditRisk()
-			st.write('Decision Tree')
-			credit_risk.train_decision_tree()
+			st.sidebar.markdown('max_depth')
+			max_depth = st.sidebar.slider("",1, 50, 8, key="MAX_DEPTH")
+			st.sidebar.markdown('max_features')
+			max_features = st.sidebar.slider("",5, 20, 10, key="MAX_FEATURES")
+			st.sidebar.markdown('min_samples_leaf')
+			min_samples_leaf = st.sidebar.slider("",10, 50, 30, key="MIN_SAMPLES_LEAF")
+			st.sidebar.header('')
+			if st.sidebar.button("Train"):
+				credit_risk = CreditRisk()
+				credit_risk.decision_tree_analysis(max_depth, max_features, min_samples_leaf)
 
 		if model_option == 'Random Forest':
-			credit_risk = CreditRisk()
-			st.write('Random Forest')
-			credit_risk.train_random_forest()
+			st.sidebar.markdown('max_depth')
+			max_depth = st.sidebar.slider("",1, 50, 8, key="MAX_DEPTH")
+			st.sidebar.markdown('max_features')
+			max_features = st.sidebar.slider("",5, 20, 10, key="MAX_FEATURES")
+			st.sidebar.markdown('min_samples_leaf')
+			min_samples_leaf = st.sidebar.slider("",10, 50, 30, key="MIN_SAMPLES_LEAF")
+			st.sidebar.header('')
+			if st.sidebar.button("Train"):
+				credit_risk = CreditRisk()
+				credit_risk.random_forest_analysis(max_depth, max_features, min_samples_leaf)
 
 		if model_option == 'Xgboost':
-			credit_risk = CreditRisk()
-			st.write('Xgboost')
-			credit_risk.train_xgboost()
-
-		if model_option == 'KNN':
-			credit_risk = CreditRisk()
-			st.write('KNN')
-			credit_risk.train_knn()
+			st.sidebar.markdown('max_depth')
+			max_depth = st.sidebar.slider("",1, 50, 8, key="MAX_DEPTH")
+			st.sidebar.markdown('max_features')
+			max_features = st.sidebar.slider("",5, 20, 10, key="MAX_FEATURES")
+			st.sidebar.markdown('min_samples_leaf')
+			min_samples_leaf = st.sidebar.slider("",10, 50, 30, key="MIN_SAMPLES_LEAF")
+			st.sidebar.header('')
+			if st.sidebar.button("Train"):
+				credit_risk = CreditRisk()
+				credit_risk.xgboost_analysis(max_depth, max_features, min_samples_leaf)
 
 		if model_option == 'Gradient Boosting Tree':
-			credit_risk = CreditRisk()
-			st.write('Gradient Boosting Tree')
-			credit_risk.train_gradient_boosting()
+			st.sidebar.markdown('max_depth')
+			max_depth = st.sidebar.slider("",1, 50, 8, key="MAX_DEPTH")
+			st.sidebar.markdown('max_features')
+			max_features = st.sidebar.slider("",5, 20, 10, key="MAX_FEATURES")
+			st.sidebar.markdown('min_samples_leaf')
+			min_samples_leaf = st.sidebar.slider("",10, 50, 30, key="MIN_SAMPLES_LEAF")
+			st.sidebar.header('')
+			if st.sidebar.button("Train"):
+				credit_risk = CreditRisk()
+				credit_risk.gradient_boosting_analysis(max_depth, max_features, min_samples_leaf)
+
+		if model_option == 'KNN':
+			st.sidebar.markdown('n_neighbors')
+			n_neighbors = st.sidebar.slider("",10, 20, 10, key="N_NEIGHBORS")
+			st.sidebar.header('')
+			if st.sidebar.button("Train"):
+				credit_risk = CreditRisk()
+				credit_risk.knn_analysis(n_neighbors)
 
 		if model_option == 'Naive Bayes':
 			credit_risk = CreditRisk()
-			st.write('GaussianNB')
-			credit_risk.train_GaussianNB()
+			credit_risk.GaussianNB_analysis()
+
+		if model_option == 'LDA':
+			credit_risk = CreditRisk()
+			credit_risk.lda_analysis()
+
+		if model_option == 'QDA':
+			credit_risk = CreditRisk()
+			credit_risk.qda_analysis()
 	#========================================== Predictive Model =======================================
 
 
