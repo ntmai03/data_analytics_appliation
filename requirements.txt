@@ -34,4 +34,3 @@ gensim
 networkx
 pyvis
 graphviz
-networkx
