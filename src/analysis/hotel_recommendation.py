@@ -264,7 +264,7 @@ class HotelRecommendation:
 
         #pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
         cf.S3_CLIENT.download_file(cf.S3_DATA_PATH, cf.S3_DATA_BOOKING + 'booking_pretrained_model.pkl', '/app/data_analytics_appliation/booking_pretrained_model.pkl')
-        pretrained_model = joblib.load(/'app/data_analytics_appliation/booking_pretrained_model.pkl')
+        pretrained_model = joblib.load('/app/data_analytics_appliation/booking_pretrained_model.pkl')
         
         st.write(pretrained_model.wv.similarity("bistro","restaurant"))
         st.write(pretrained_model.wv.similarity("train","bus"))
