@@ -263,6 +263,7 @@ class HotelRecommendation:
             tokenized_corpus.append(words.split())
 
         #pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
+        st.write(gensim.__version__) 
         cf.S3_CLIENT.download_file(cf.S3_DATA_PATH, cf.S3_DATA_BOOKING + 'booking_pretrained_model.pkl', 'booking_pretrained_model.pkl')
         pretrained_model = joblib.load('booking_pretrained_model.pkl')
         
