@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 import os
 from io import StringIO
+import boto3
+import pickle
 
 import streamlit as st
 
@@ -70,7 +72,6 @@ from nltk.tokenize import RegexpTokenizer
 nltk.download('stopwords')
 nltk.download('punkt')
 nltk.download('wordnet')
-nltk.download('omw-1.4')
 
 
 # deep learning library
@@ -259,8 +260,10 @@ class HotelRecommendation:
         tokenized_corpus = []
         for words in corpus_df['text_clean']:
             tokenized_corpus.append(words.split())
-        
-        pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/airbnb_pretrained_model.pkl')
+
+        #pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
+        cf.S3_CLIENT.download_file(cf.S3_DATA_PATH, cf.S3_DATA_BOOKING + 'booking_pretrained_model.pkl', cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
+        pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
         pretrained_model.train(tokenized_corpus, total_examples=pretrained_model.corpus_count, epochs = 5)
         joblib.dump(pretrained_model, cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
 
@@ -282,10 +285,6 @@ class HotelRecommendation:
 
         )
         
-
-    def text_processing(self):
-        pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
-
 
 
     ##############################################################################################
@@ -775,6 +774,8 @@ class HotelRecommendation:
 
         corpus_df = dm.s3_load_csv(cf.S3_DATA_PATH,  cf.S3_DATA_BOOKING + city + '/corpus_df.csv')
         pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
+        #cf.S3_CLIENT.download_file(cf.S3_DATA_PATH, cf.S3_DATA_BOOKING + 'booking_pretrained_model.pkl', cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
+        #pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
         ae_embeddings = dm.s3_load_csv(cf.S3_DATA_PATH,  cf.S3_DATA_BOOKING + city + '/booking_ae_embedding_df.csv')
 
         autoencoder = keras.models.load_model(city + "_booking_autoencoder_model.h5")
@@ -850,7 +851,9 @@ class HotelRecommendation:
 
 
         df_train = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'airbnb_cluster_df.csv')
-        pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/airbnb_pretrained_model.pkl')
+        #pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/airbnb_pretrained_model.pkl')
+        #cf.S3_CLIENT.download_file(cf.S3_DATA_PATH, cf.S3_DATA_BOOKING + 'booking_pretrained_model.pkl', cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
+        #pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
         ae_embeddings = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'airbnb_ae_embeddings.csv')
 
         autoencoder = keras.models.load_model("airbnb_autoencoder_model.h5")
