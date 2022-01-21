@@ -74,6 +74,7 @@ nltk.download('punkt')
 nltk.download('wordnet')
 nltk.download('omw-1.4')
 
+
 # deep learning library
 from keras.models import *
 from keras.layers import *
@@ -264,6 +265,12 @@ class HotelRecommendation:
         #pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
         cf.S3_CLIENT.download_file(cf.S3_DATA_PATH, cf.S3_DATA_BOOKING + 'booking_pretrained_model.pkl', cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
         pretrained_model = joblib.load(cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
+        
+        st.write(pretrained_model.wv.similarity("bistro","restaurant"))
+        st.write(pretrained_model.wv.similarity("train","bus"))
+        st.write(pretrained_model.wv.similarity("train","travel"))
+        st.write(pretrained_model.wv.similarity("steakhouse","restaurant"))
+
         pretrained_model.train(tokenized_corpus, total_examples=pretrained_model.corpus_count, epochs = 5)
         joblib.dump(pretrained_model, cf.TRAINED_MODEL_PATH + '/booking_pretrained_model.pkl')
 
