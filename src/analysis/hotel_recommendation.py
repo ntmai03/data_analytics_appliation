@@ -455,7 +455,7 @@ class HotelRecommendation:
 
         # predict embedded encoder layer
         encoded = encoder_layer.predict(X_train)
-        ae_embeddings = pd.DataFrame(encoded)
+        ae_embeddings = pd.DataFrame(encoded, columns = range(0,latent_dim))
         st.write(ae_embeddings.shape)
         st.write(ae_embeddings.head())
 
