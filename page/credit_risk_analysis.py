@@ -9,7 +9,6 @@ import os
 sys.path.append('src')
 from src import config as cf
 from src.util import data_manager as dm
-from src.data_processing import diabetes_feature_engineering as fe
 from analysis.credit_risk import CreditRisk
 
 def app():
@@ -51,7 +50,7 @@ def app():
 		processed_X_train = credit_risk.data_processing_pipeline(credit_risk.X_train, 1)
 		df_train = pd.concat([processed_X_train, credit_risk.y_train], axis=1)
 		df_train.to_csv('credit_risk_train.csv', index=False)
-		processed_X_test = credit_risk.data_processing_pipeline(credit_risk.X_train, 0)
+		processed_X_test = credit_risk.data_processing_pipeline(credit_risk.X_test, 0)
 		df_test = pd.concat([processed_X_test, credit_risk.y_test], axis=1)
 		df_test.to_csv('credit_risk_test.csv', index=False)
 
@@ -161,32 +160,72 @@ def app():
 
 
 	#============================================= Prediction ==========================================
-	if task_option == 'Prediction':
+	if task_option == 'Make Prediction':
 		st.write("#### Input your data for prediction")
-		Pregnancies = st.text_input("Pregnancies", '3')
-		Glucose = st.text_input("Glucose", '158')
-		BloodPressure = st.text_input("BloodPressure", '76')
-		SkinThickness = st.text_input("SkinThickness", '36')
-		Insulin = st.text_input("Insulin", '245')
-		BMI = st.text_input("BMI", '31.6')
-		DiabetesPedigreeFunction = st.text_input("DiabetesPedigreeFunction", '0.851')
-		Age = st.text_input("Age", '28')
+		loan_amnt = st.text_input("loan_amnt", '5000')
+		term = st.text_input("term", ' 36 months')
+		int_rate = st.text_input("int_rate", '12.49')
+		grade = st.text_input("grade", 'B')
+		sub_grade = st.text_input("sub_grade", 'B5')
+		emp_title = st.text_input("emp_title", 'author')
+		emp_length = st.text_input("emp_length", '1 year')
+		home_ownership = st.text_input("home_ownership", 'OWN')
+		annual_inc = st.text_input("annual_inc", '28000.0')
+		verification_status = st.text_input("verification_status", 'Not Verified')
+		issue_d = st.text_input("issue_d", 'Oct-14')
+		loan_status = st.text_input("loan_status", '5000')
+		purpose = st.text_input("purpose", 'medical')
+		title = st.text_input("title", 'Medical expenses')
+		zip_code = st.text_input("zip_code", '480xx')
+		addr_state = st.text_input("addr_state", 'MI')
+		dti = st.text_input("dti", '20.87')
+		delinq_2yrs = st.text_input("delinq_2yrs", '0.0')
+		earliest_cr_line = st.text_input("earliest_cr_line", 'Dec-99')
+		inq_last_6mths = st.text_input("inq_last_6mths", '1.0')
+		open_acc = st.text_input("open_acc", '8.0')
+		pub_rec = st.text_input("pub_rec", '0.0')
+		revol_bal = st.text_input("revol_bal", '4549')
+		revol_util = st.text_input("revol_util", '64.1')
+		total_acc = st.text_input("total_acc", '18.0')		
+		initial_list_status = st.text_input("initial_list_status", 'w')
+
 
 		# Add button Predict
 		if st.button("Predict"):
-			new_obj = dict({'Outcome':1,
-							'Pregnancies':[Pregnancies],
-							'Glucose':[Glucose],
-							'BloodPressure':[BloodPressure],
-							'SkinThickness':[SkinThickness],
-							'Insulin':[Insulin],
-							'BMI':[BMI],
-							'DiabetesPedigreeFunction':[DiabetesPedigreeFunction],
-							'Age':[Age] })
+			new_obj = dict({
+							'loan_amnt':[loan_amnt],
+							'term':[term],
+							'int_rate':[int_rate],
+							'grade':[grade],
+							'sub_grade':[sub_grade],
+							'emp_title':[emp_title],
+							'emp_length':[emp_length],
+							'home_ownership':[home_ownership],
+							'annual_inc':[annual_inc],
+							'verification_status':[verification_status],
+							'issue_d':[issue_d],
+							'loan_status':[loan_status],
+							'purpose':[purpose],
+							'title':[title],
+							'zip_code':[zip_code],
+							'addr_state':[addr_state],
+							'dti':[dti],
+							'delinq_2yrs':[delinq_2yrs],
+							'earliest_cr_line':[earliest_cr_line],
+							'inq_last_6mths':[inq_last_6mths],
+							'open_acc':[open_acc],
+							'pub_rec':[pub_rec],
+							'revol_bal':[revol_bal],
+							'revol_util':[revol_util],
+							'total_acc':[total_acc],
+							'initial_list_status':[initial_list_status]
+							})
 			new_obj = pd.DataFrame.from_dict(new_obj)
 			st.write(new_obj)
-			new_obj = data_engineering_pipeline1(new_obj)
-			model_file = os.path.join(cf.TRAINED_MODEL_PATH,"diabetes_logistic_regression.pkl")
+			credit_risk = CreditRisk()
+			new_obj = credit_risk.data_processing_pipeline(new_obj, 0)
+			st.write(new_obj)
+			model_file = os.path.join(cf.TRAINED_MODEL_PATH,"credit_risk_logistic_regression.pkl")
 			model = joblib.load(model_file)
-			st.write("**Predicted Diabetes**: ", model.predict(new_obj))
+			st.write("**Predicted Default**: ", model.predict(new_obj))
 	#============================================= Prediction ==========================================

@@ -9,22 +9,26 @@ import os
 sys.path.append('src')
 from src import config as cf
 from src.util import data_manager as dm
-from src.data_processing import diabetes_feature_engineering as fe
-from util.booking_scrapper import BookingScrapper
+from data_processing.booking_scrapper import BookingScrapper
 from analysis.hotel_recommendation import HotelRecommendation
 
 
 def app():
 
     st.sidebar.header('')
-    st.sidebar.header('')
-    location_list = ['Select city...',
-                         'London',
-                         'Paris',
-                         'AirBnb']
+    st.sidebar.header('')  
+    new_city = st.sidebar.text_input('Input your destination').capitalize()
+    if st.sidebar.button('Add'):
+        Booking = BookingScrapper()
+        cf.data['dest_name'].update({new_city:str.lower(new_city)})
+        dest_id, _ = Booking.search_location(str.lower(new_city))
+        cf.data['dest_id'].update({new_city:dest_id})
+        cf.update_yaml_config_file(cf.data)
+
+    location_list = ['Select city...'] + list(cf.data['dest_name'].keys())
     location_option = st.sidebar.selectbox('',location_list)
-    source_dict = {'London':'london', 'Paris':'paris'}
-    location_dict = {'London':'-2601889', 'Paris':'-1456928'}
+    source_dict = cf.data['dest_name']
+    location_dict = cf.data['dest_id']
     st.sidebar.header('')
     st.sidebar.header('')
 
@@ -40,35 +44,32 @@ def app():
     task_option = st.sidebar.selectbox('',task_type)
     st.sidebar.header('')
 
-    if task_option == 'Extract Data':
-        if(location_option == 'London'):
-            Booking = BookingScrapper()
-            Booking.search_accommodation(dest_id='-2601889', city='london')
-            Booking.get_review()
-        if(location_option == 'Paris'):
-            Booking = BookingScrapper()
-            Booking.search_accommodation(dest_id='-1456928', city='paris')
-            Booking.get_review()
 
-    if task_option == 'Transform Data':
-        if(location_option == 'London'):
+    if ((task_option == 'Extract Data') & (location_option != 'Select city...')):
             Booking = BookingScrapper()
-            Booking.create_review_file(city='london')
-        if(location_option == 'Paris'):
+            _, nr_hotels = Booking.search_location(source_dict[location_option])
+            nr_hotels = int(nr_hotels)
+            hotels = st.sidebar.slider("Select number of hotels",20, nr_hotels, value=60, step=20, key="N_HOTELS")
+            st.write(hotels)
+            if st.sidebar.button("Download"):
+                Booking.search_accommodation(dest_id=int(location_dict[location_option]), city=source_dict[location_option], nr_hotels=int(hotels))
+                Booking.get_review()
+
+
+    if ((task_option == 'Transform Data') & (location_option != 'Select city...')):
             Booking = BookingScrapper()
-            Booking.create_review_file(city='paris')
+            Booking.create_review_file(city=source_dict[location_option])
 
 
     if task_option == 'Data Processing':
         if(location_option != 'Select city...'):
             hotel = HotelRecommendation()
-            hotel.create_corpus(source_dict[location_option])
+            hotel.text_processing(source_dict[location_option])
 
 
     if task_option == 'Topic Modeling':
         if(location_option == 'AirBnb'):
             hotel = HotelRecommendation()
-            hotel.topic_modeling_airbnb()
         if((location_option != 'Select city...') & (location_option != 'AirBnb')):
             st.sidebar.markdown('N of clusters')
             n_clusters = st.sidebar.slider("",2, 10, 7, key="N_CLUSTERS")
@@ -81,11 +82,8 @@ def app():
             st.sidebar.header('')
             if st.sidebar.button("Train"):
                 hotel = HotelRecommendation()
-                hotel.train_autoencoder(source_dict[location_option], 
-                                            encoding1_dim, 
-                                            encoding2_dim, 
-                                            latent_dim, 
-                                            n_clusters)
+                ae_embeddings = hotel.train_autoencoder(source_dict[location_option], encoding1_dim, encoding2_dim, latent_dim)
+                hotel.kmeans_topic_modeling(source_dict[location_option], ae_embeddings, int(n_clusters))
 
 
     if task_option == 'Hotel Recommendation':
@@ -125,7 +123,7 @@ def app():
         st.sidebar.header('')
         LISTING_ID = st.sidebar.number_input(
             "Input listing_id",   
-            value=1296836,  #104373
+            value=2031539,  #104373
             key="LISTING_ID",
         )
 

@@ -9,8 +9,8 @@ import os
 sys.path.append('src')
 from src import config as cf
 from src.util import data_manager as dm
-from src.data_processing import diabetes_feature_engineering as fe
 from analysis.unsupervised import UnsupervisedAnalysis
+from analysis.news_category import NewsCategory
 
 
 # Visualization
@@ -20,6 +20,15 @@ import matplotlib.pyplot as plt
 
 
 def app():
+
+    st.sidebar.header('')
+    st.sidebar.header('')
+    data_type = ['Select Dataset',
+                 'MNIST',
+                 'News'
+                 ]
+    data_option = st.sidebar.selectbox('', data_type)
+    st.sidebar.header('')
 
     st.sidebar.header('')
     st.sidebar.header('')
@@ -46,27 +55,38 @@ def app():
         # Load and show raw data
         if reduction_option == 'Select Model':
             st.markdown("#### Raw data:")
-            model = UnsupervisedAnalysis()
-            model.load_mnist_ds(flag=1)
-            # Display the first 5 digits
-            st.markdown('#### Display the first 5 digits of MNIST dataset')
-            model.show_image()
+            if(data_option == 'MNIST'):
+                model = UnsupervisedAnalysis()
+                model.load_mnist_ds(flag=1)
+                # Display the first 5 digits
+                st.markdown('#### Display the first 5 digits of MNIST dataset')
+                model.show_image()
+            if(data_option == 'News'):
+                model = NewsCategory()
+                st.write('#### Display the first 5 rows')
+                st.write(model.data.head())
 
         if reduction_option == 'PCA':
-            model = UnsupervisedAnalysis()
-            model.load_mnist_ds()   
+            if(data_option == 'MNIST'):
+                model = UnsupervisedAnalysis()
+            if(data_option == 'News'):
+                model = NewsCategory()
             model.pca_analysis()
             model.pca_transform()   
 
         if reduction_option == 'SVD':
-            model = UnsupervisedAnalysis()
-            model.load_mnist_ds()   
+            if(data_option == 'MNIST'):
+                model = UnsupervisedAnalysis()
+            if(data_option == 'News'):
+                st.write('TBC')
             model.svd_analysis()
             model.svd_transform()  
 
         if reduction_option == 'AutoEncoder':
-            model = UnsupervisedAnalysis()
-            model.load_mnist_ds()   
+            if(data_option == 'MNIST'):
+                model = UnsupervisedAnalysis()
+            if(data_option == 'News'):
+                st.write('TBC')            
             model.autoencoder_analysis()
             model.autoencoder_transform()         
 
@@ -82,13 +102,14 @@ def app():
         st.sidebar.header('')
 
         if cluster_option == 'KMeans':
-            model = UnsupervisedAnalysis()
-            model.load_mnist_ds()   
+            if(data_option == 'MNIST'):
+                model = UnsupervisedAnalysis()
+            if(data_option == 'News'):
+                st.write('TBC')             
             model.kmeans_analysis()
   
         if cluster_option == 'GMM':
             model = UnsupervisedAnalysis()
-            model.load_mnist_ds()   
             model.gmm_analysis()
 
 

@@ -10,8 +10,6 @@ from io import BytesIO
 sys.path.append('src')
 from src import config as cf
 from src.util import data_manager as dm
-from src.data_processing import kchouse_feature_engineering as fe
-from pipeline.kchouse_pipeline import *
 from analysis.house_price import HousePrice
 
 def app():
