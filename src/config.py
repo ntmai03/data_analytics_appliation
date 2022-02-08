@@ -54,7 +54,7 @@ HOTEL_LIST_FILE = 'booking_list.csv'
 BOOKING_SEARCH_HOTEL = 'https://booking-com.p.rapidapi.com/v1/hotels/search'
 BOOKING_SEARCH_LOCATION = 'https://booking-com.p.rapidapi.com/v1/hotels/locations'
 BOOKING_RAPIDAPID_QUERYSTRING = {
-            'x-rapidapi-key': "a8b6fd745amshd1ae2e4a39d3950p193801jsn3549c554af64",
+            'x-rapidapi-key': st.secrets["rapidapid_booking_key"],
             'x-rapidapi-host': "booking-com.p.rapidapi.com"
         }
 
