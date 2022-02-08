@@ -6,78 +6,76 @@ from io import BytesIO
 import datetime
 
 import streamlit as st
-
-# Scikit-Learn ≥0.20 is required
-import sklearn
-
-# Dataframe manipulation
-import numpy as np
-import pandas as pd
-
-# for plotting
-import matplotlib.pyplot as plt
-import seaborn as sns
-sns.set_style('whitegrid')
-
-# Preprocessing
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, LabelEncoder
-from sklearn.pipeline import Pipeline
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder, StandardScaler
-
-# Modelling Helpers:
-from sklearn.preprocessing import Normalizer, scale
-from sklearn.model_selection import train_test_split
-from sklearn.feature_selection import RFECV
-from sklearn.model_selection import GridSearchCV, KFold, cross_val_score, ShuffleSplit, cross_validate
-from sklearn import model_selection
-from sklearn.model_selection import train_test_split
-
-from sklearn.cluster import KMeans
-from sklearn.mixture import GaussianMixture
-from sklearn.cluster import AgglomerativeClustering
-
-import statsmodels.api as sm
-import sklearn
-
-# to persist the model and the scaler
 import joblib
-
-from src.util import data_manager as dm
-from src.util import unsupervised_util as unu
-from src import config as cf
-
-import sklearn.decomposition as dec
-import sklearn.datasets as ds
-import sklearn.cluster as clu
+import sys
+import sklearn
+import pandas as pd
+import numpy as np
 
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
-from scipy.sparse import csc_matrix
 
-from sklearn.model_selection import train_test_split
+## for data
+import collections
+import json
+
+## for plotting
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+## for processing
+import spacy
+nlp = spacy.load('en_core_web_sm')
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.stem.wordnet import WordNetLemmatizer 
+from nltk.stem import SnowballStemmer
+from nltk.tokenize.toktok import ToktokTokenizer
+nltk.download('stopwords')
+nltk.download('punkt')
+nltk.download('wordnet')
+lst_stopwords = nltk.corpus.stopwords.words("english")
+
+import string
+import re
+from bs4 import BeautifulSoup
+import unicodedata
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.metrics.pairwise import euclidean_distances
-from sklearn.metrics import mean_squared_error
-from math import sqrt
-from sklearn.mixture import GaussianMixture
+from sklearn.metrics.pairwise import linear_kernel
+from sklearn.preprocessing import  LabelEncoder
+
+# for classification
+from sklearn import feature_extraction, model_selection, naive_bayes, pipeline, manifold, preprocessing
+
+#from contractions import CONTRACTION_MAP
+# import text_normalizer as tn
+
+## for word embedding
+import gensim
+import gensim.downloader as gensim_api
+from gensim.models import KeyedVectors
+from gensim.models import Word2Vec
+from gensim.models.phrases import Phrases, Phraser
+
+## for deep learning
+from tensorflow.keras import models, layers, preprocessing as kprocessing
+from tensorflow.keras import backend as K
 
 # TensorFlow ≥2.0 is required
 import tensorflow as tf
 from tensorflow import keras
 assert tf.__version__ >= "2.0"
+# deep learning library
+from keras.models import *
+from keras.layers import *
+from keras.callbacks import *
 
-# Deep Learnign libraries
-import tensorflow as tf
-import keras
-from keras.models import Model, load_model
-from keras.layers import Input, Dense
-from keras.callbacks import ModelCheckpoint, TensorBoard
-from keras import regularizers
+from src.util import data_manager as dm
+from src import config as cf
 
-class UnsupervisedAnalysis:
+
+class NewsCategory:
     """
     This class enables data loading, plotting and statistical analysis of a given stock,
      upon initialization load a sample of data to check if stock exists. 
@@ -92,50 +90,99 @@ class UnsupervisedAnalysis:
         self.y_test = None
         self.X_valid = None
         self.y_valid = None
-        self.load_mnist_ds()
+        self.load_ds()
 
 
-    def load_mnist_ds(self, flag=0):
-        (X_train_full, y_train_full), (X_test, y_test) = keras.datasets.mnist.load_data()
-        X_valid, X_train = X_train_full[:5000], X_train_full[45000:]
-        y_valid, y_train = y_train_full[:5000], y_train_full[45000:]
+    def load_ds(self):
+        df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_RAW_PATH + "News_Category.csv")
+        df = df.sample(frac=1)
+        df.rename(columns={'category':'y'}, inplace=True)
+        df_train, df_test = model_selection.train_test_split(df, test_size=0.1, random_state=9)
+        self.df_train = df_train.reset_index(drop=True)
+        self.df_test = df_test.reset_index(drop=True)
+        ## get target
+        self.y_train = df_train["y"]
+        self.y_test = df_test["y"]
 
-        self.X_train = X_train
-        self.y_train = y_train
-        self.X_test = X_test
-        self.y_test = y_test
-        self.X_valid = X_valid
-        self.y_valid = y_valid
-
-        if(flag == 1):
-            st.write(X_train.shape)
-            st.write(X_train[0:2])
-
-
-    def show_image(self, n_images=5):
-        nrows, ncols = 1, 5
-        fig = plt.figure(figsize=(n_images * 1.5, 2))
-        plt.gray()
-        for i in range(ncols * nrows):
-            ax = plt.subplot(nrows, ncols, i + 1)
-            #ax.imshow(self.X_train[0:n_images].reshape(len(self.X_train[0:n_images]),28,28)[i])
-            ax.imshow(self.X_train[i])
-            plt.xticks([])
-            plt.yticks([])
-
-        buf = BytesIO()
-        fig.savefig(buf, format="png")
-        st.image(buf)
+        self.data = df
 
 
     def process_data(self):
-        self.scaled_Xtrain = self.X_train / 255.
-        self.scaled_Xtest = self.X_test / 255.
-        self.scaled_Xvalid = self.X_valid / 255.
+        wpt = nltk.WordPunctTokenizer()
+        #train_corpus = [wpt.tokenize(document) for document in df_train['text_clean']]
+        #test_corpus = [wpt.tokenize(document) for document in df_test['text_clean']]
 
-        self.scaled_Xtrain = self.scaled_Xtrain.reshape(-1, 784)
-        self.scaled_Xtest = self.scaled_Xtest.reshape(-1, 784)
-        self.scaled_Xvalid = self.scaled_Xtest.reshape(-1, 784)
+        EMBEDDING_FILE = cf.TRAINED_MODEL_PATH + '/GoogleNews-vectors-negative300.bin.gz'
+        # Set values for various parameters
+        feature_size = 300    # Word vector dimensionality  
+        window_context = 30          # Context window size                                                                                    
+        min_word_count = 10   # Minimum word count                        
+        sample = 1e-3   # Downsample setting for frequent words
+
+
+        tokenized_corpus = []
+        for words in self.df_train['text_clean']:
+            tokenized_corpus.append(words.split())
+            
+        pretrained_model = Word2Vec(size = 300, window=window_context, min_count = 1, workers=-1)
+        pretrained_model.build_vocab(tokenized_corpus)
+        pretrained_model.intersect_word2vec_format(EMBEDDING_FILE, lockf=1.0, binary = True)
+        pretrained_model.train(tokenized_corpus, total_examples=pretrained_model.corpus_count, epochs = 5)
+        joblib.dump(pretrained_model, 'news_category_pretrained_model.pkl')
+
+        embeddings =   self.vectorize(self.df_train['text_clean'])
+        scaler = MinMaxScaler()
+        self.X_train = pd.DataFrame(embeddings)
+        self.scaled_Xtrain = pd.DataFrame(scaler.fit_transform(embeddings), columns = range(0,300))
+        st.write(X_train.shape)
+        st.write(X_train.head())
+
+
+    def average_word_vectors(words, model, vocabulary, num_features):
+        
+        feature_vector = np.zeros((num_features,),dtype="float64")
+        nwords = 0.
+        
+        for word in words:
+            if word in vocabulary: 
+                nwords = nwords + 1.
+                feature_vector = np.add(feature_vector, model[word])
+        
+        if nwords:
+            feature_vector = np.divide(feature_vector, nwords)
+            
+        return feature_vector
+        
+
+    def averaged_word_vectorizer(corpus, model, num_features):
+        vocabulary = set(model.wv.index2word)
+        #vocabulary = list(model.wv.index_to_key)
+        features = [average_word_vectors(tokenized_sentence, model.wv, vocabulary, num_features) for tokenized_sentence in corpus]
+        return np.array(features)
+
+
+    def vectorize(self,corpus):
+
+        pretrained_model = joblib.load('news_category_pretrained_model.pkl')
+        # global embeddings
+        embeddings = []
+        #a list to store the vectors; these are vectorized Netflix Descriptions
+        for line in corpus: #for each cleaned description
+            w2v = None
+            count = 0
+            for word in line.split():
+                if word in pretrained_model.wv.vocab:
+                    count += 1
+                    if w2v is None:
+                        w2v = pretrained_model.wv[word]
+                    else:
+                        w2v = w2v + pretrained_model.wv[word]
+            if w2v is not None:
+                w2v = w2v / count
+                #append element to the end of the embeddings list 
+                embeddings.append(w2v)
+
+        return embeddings   
 
 
     def pca_analysis(self):

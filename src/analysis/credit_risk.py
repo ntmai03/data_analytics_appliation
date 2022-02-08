@@ -16,6 +16,7 @@ import pandas as pd
 # for plotting
 import matplotlib.pyplot as plt
 import seaborn as sns
+import joblib
 
 from sklearn.tree import export_graphviz
 from graphviz import Source
@@ -229,6 +230,7 @@ class CreditRisk:
                                          '1 year':1,
                                          '< 1 year':0.5})
 
+
         return data
 
 
@@ -251,7 +253,7 @@ class CreditRisk:
         for var in var_list:
             class_ratio = class_ratio_dict[var]
             data[var + '_ratio'] = data[var].map(class_ratio)
-
+            
         return data
 
 
@@ -295,6 +297,9 @@ class CreditRisk:
         data['earliest_cr_line_date'] = pd.to_datetime(data['earliest_cr_line'], format = '%b-%y')
         data['earliest_cr_line_date'] = pd.to_datetime(data['earliest_cr_line'], format = '%b-%y')
         data['earliest_cr_line_date'] = pd.to_datetime(data['earliest_cr_line'], format = '%b-%y')
+       
+        data['num_of_days'] = data['issue_d_date'] - data['earliest_cr_line_date']
+        data['num_of_days'] = data['num_of_days'].apply(lambda x: x.days)
 
         return data
 
@@ -389,7 +394,8 @@ class CreditRisk:
         df = self.transform_term(df, 'term')
         df = self.transform_num_emp_length(df, 'emp_length')
         df = self.calculate_class_ratio(df, self.RATIO_VARS, train_flag)
-        data_scaled = self.scaling_data(df, self.NUMERICAL_VARS, train_flag)
+        df = self.transform_temporal_vars(df)
+        data_scaled = self.scaling_data(df, self.TRAIN_NUM_VARS, train_flag)
         data_categorical = self.create_dummy_vars(df, self.CATEGORICAL_VARS, train_flag)
         df = pd.concat([data_scaled,data_categorical], axis=1)
 
@@ -435,6 +441,8 @@ class CreditRisk:
         model = LogisticRegression(C=1e9, solver='lbfgs')
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
+        # joblib.dump(model, cf.TRAINED_MODEL_PATH + '/credit_risk_logistic_regression.pkl')
+
 
         # Result Summary Table
         st.markdown('#### Result Summary Table')
