@@ -1,64 +1,13 @@
-# Package Overview
-package_name: housing_model
-
-
-# Data Files
-root_url: https://raw.githubusercontent.com/ageron/handson-ml/master/
-path: datasets/housing/
-csv_file: housing.csv
-zip_file: housing.tgz
-data_url: https://raw.githubusercontent.com/ageron/handson-ml/master/datasets/housing/housing.csv
-
-
-# Variables
-# The variable we are attempting to predict (sale price)
-target: median_house_value
-
-
-pipeline_name: housing_model
-pipeline_save_file: housing_model_output
-
-
-features:
-  - longitude
-  - latitude
-  - housing_median_age
-  - total_rooms
-  - total_bedrooms
-  - population
-  - households
-  - median_income
-  - ocean_proximity
- 
-
-numerical_vars:
-  - longitude
-  - latitude
-  - housing_median_age
-  - total_rooms
-  - total_bedrooms
-  - population
-  - households
-  - median_income
-
-
-categorical_vars:
-  - ocean_proximity
-
-
-additional_vars:
-  - rooms_per_household
-  - population_per_household
-
-
-# set train/test split
-test_size: 0.2
-
-
-# to set the random seed
-random_state: 0
-
-
-alpha: 0.001
-
-
+dest_id:
+  London: '-2601889'
+  New york: '20088325'
+  Oxford: '-2604911'
+  Paris: '-1456928'
+dest_name:
+  London: london
+  New york: new york
+  Oxford: oxford
+  Paris: paris
+package_name: data-tool
+review_num_of_page: 5
+autoencoder_n_epoch: 20
