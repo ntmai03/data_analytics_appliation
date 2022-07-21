@@ -1,9 +1,8 @@
-# Python ≥3.5 is required
+# system & i/o
 import sys
 from pathlib import Path
 import os
 from io import BytesIO
-
 import streamlit as st
 
 # Scikit-Learn ≥0.20 is required
@@ -17,7 +16,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import joblib
-
 from sklearn.tree import export_graphviz
 from graphviz import Source
 from IPython.display import Image
@@ -38,9 +36,8 @@ from sklearn.model_selection import GridSearchCV, KFold, cross_val_score, Shuffl
 from sklearn import model_selection
 from sklearn.model_selection import train_test_split
 
-import statsmodels.api as sm
-import sklearn
 # for Classification models
+import statsmodels.api as sm
 from sklearn.linear_model import LogisticRegression, LogisticRegressionCV
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -50,6 +47,7 @@ from sklearn.svm import SVC, LinearSVC
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier, BaggingClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 from xgboost import XGBClassifier
+
 # to persist the model and the scaler
 import joblib
 
@@ -59,10 +57,10 @@ from sklearn.metrics import (confusion_matrix, classification_report, accuracy_s
                              precision_recall_curve, precision_recall_fscore_support, auc, 
                              average_precision_score)
 
+# utility function
 from src.util import data_manager as dm
 from src.util import classification_util as clfu
 from src import config as cf
-
 
 credit_risk_class_ratio = os.path.join(cf.ANALYSIS_PATH, 'credit_risk_class_ratio.npy')
 credit_risk_median_imputer = os.path.join(cf.ANALYSIS_PATH, 'credit_risk_median_imputer.npy')
@@ -73,58 +71,102 @@ credit_risk_dummy_vars = os.path.join(cf.ANALYSIS_PATH, 'credit_risk_dummy_vars.
 
 class CreditRisk:
     """
-    This class enables data loading, plotting and statistical analysis of a given stock,
-     upon initialization load a sample of data to check if stock exists. 
+    This class enables data loading, plotting and statistical analysis. 
         
     """
+
     ##############################################################################################
     # Define parameters
     ##############################################################################################
-    SELECTED_VARS = ['loan_amnt','term', 'int_rate','grade', 'sub_grade', 'emp_title', 'emp_length', 
-                     'home_ownership', 'annual_inc', 'verification_status', 'issue_d', 'loan_status', 
-                     'purpose', 'title', 'zip_code', 'addr_state', 'dti', 'delinq_2yrs', 'earliest_cr_line', 
-                     'inq_last_6mths', 'open_acc', 'pub_rec', 'revol_bal', 'revol_util', 'total_acc', 
-                     'initial_list_status']
-
+    # original vars: features of interest
+    SELECTED_VARS = ['installment','loan_amnt','term', 'int_rate', 'grade', 'sub_grade', 'emp_title', 
+                     'emp_length', 'home_ownership', 'annual_inc', 'verification_status', 'title',
+                     'issue_d', 'purpose', 'zip_code', 'addr_state', 'dti', 'delinq_2yrs',  
+                     'earliest_cr_line', 'inq_last_6mths', 'open_acc', 'pub_rec', 
+                     'revol_bal', 'revol_util', 'total_acc', 'initial_list_status', 'application_type']
+    # target 
     RAW_TARGET = 'loan_status'
-
     TARGET_VALUE = ['Fully Paid', 'Charged Off', 'Default']
-
+    TARGET = 'Class'
+    
+    # features
+    ALL_VARS = SELECTED_VARS + [RAW_TARGET]
+    NUMERICAL_VARS = ['loan_amnt', 'int_rate', 'annual_inc', 'dti', 'delinq_2yrs', 
+                      'inq_last_6mths', 'open_acc', 'pub_rec', 'revol_bal', 'revol_util', 'total_acc']
+    CATEGORICAL_VARS = ['home_ownership', 'verification_status', 'initial_list_status']
+    TEMPORAL_VARS = ['issue_d', 'earliest_cr_line']
+    RATIO_VARS = ['sub_grade', 'purpose', 'zip_code']
+    
     # rename columns
     FEATURE_MAP = {'loan_status': 'Class',}
-
-    TARGET = 'Class'
+    
+    # mapping value
+    TARGET_VALUE_MAPPING = {'Fully Paid':0, 'Charged Off':1, 'Default':1}
+    TERM_MAPPING = {'36 months': 36, '60 months': 60}
+    EMP_LEN_MAPPING = {'10+ years':10, 
+                       '9 years':9, 
+                       '8 years':8,
+                       '7 years':7,
+                       '6 years':6,
+                       '5 years':5,
+                       '4 years':4,
+                       '3 years':3,
+                       '2 years':2,
+                       '1 year':1,
+                       '< 1 year':0.5}
 
     # data type conversion
-    DATA_TYPE = {'term': 'int64',
-                'Class': 'int64'}
+    DATA_TYPE = {'installment': 'float64',
+                'loan_amnt': 'float64',
+                'term': 'str',
+                'int_rate': 'float64',
+                'grade': 'str',
+                'sub_grade': 'str',
+                'emp_title': 'str',
+                'emp_length': 'str',
+                'home_ownership': 'str',
+                'annual_inc': 'float64',
+                'verification_status': 'str',
+                'issue_d':  'object',
+                'loan_status': 'str',
+                'purpose': 'str',
+                'title': 'str',
+                'zip_code': 'str',
+                'addr_state': 'str',
+                'dti': 'float64',
+                'delinq_2yrs': 'float64',
+                'earliest_cr_line': 'object',
+                'inq_last_6mths': 'int64',
+                'open_acc': 'int64',
+                'pub_rec': 'float64',
+                'revol_bal': 'float64',
+                'revol_util':'float64',
+                'total_acc': 'int64',
+                'initial_list_status': 'str',
+                'application_type': 'str'}
 
-    NUMERICAL_VARS_WITH_NA = []
+    # used in exploration stage
+    RAW_CONTINUOUS_VARS = ['installment','loan_amnt', 'int_rate', 'annual_inc', 'dti', 'delinq_2yrs', 
+                      'inq_last_6mths', 'open_acc', 'pub_rec', 'revol_bal', 'revol_util', 'total_acc']
+    RAW_CATEGORICAL_VARS = ['grade', 'sub_grade', 'emp_title', 'emp_length', 'home_ownership', 
+                        'verification_status', 'purpose', 'title', 'zip_code', 'addr_state', 'initial_list_status']
 
+    # selected vars applied data engineering for building model
     NUMERICAL_VARS = ['loan_amnt', 'term', 'int_rate', 'annual_inc', 'dti', 'delinq_2yrs', 
                       'inq_last_6mths', 'open_acc', 'pub_rec', 'revol_bal', 'revol_util', 'total_acc']
-
-    #CATEGORICAL_VARS = ['grade', 'sub_grade', 'emp_title', 'emp_length', 'home_ownership', 
-    #                    'verification_status', 'purpose', 'title', 'zip_code', 'addr_state', 'initial_list_status']
     CATEGORICAL_VARS = ['home_ownership', 'verification_status', 'initial_list_status']
-
     TEMPORAL_VARS = ['issue_d', 'earliest_cr_line']
-
     RATIO_VARS = ['sub_grade', 'purpose', 'zip_code']
 
-    DUMMY_VARS = []
-
-
-    TRAIN_VARS = ['loan_amnt', 'term', 'int_rate', 'annual_inc', 'dti', 'delinq_2yrs', 'inq_last_6mths', 
-                  'open_acc', 'pub_rec', 'revol_bal', 'revol_util', 'total_acc', 'num_emp_length', 
-                  'num_of_days', 'sub_grade_ratio', 'purpose_ratio', 'zip_code_ratio', 
-                  'home_ownership_MORTGAGE', 'home_ownership_NONE', 'home_ownership_OTHER', 
-                  'home_ownership_OWN', 'home_ownership_RENT', 'verification_status_Source Verified', 
-                  'verification_status_Verified', 'initial_list_status_w']
-
+    # final set of num vars
     TRAIN_NUM_VARS = ['loan_amnt', 'term', 'int_rate', 'annual_inc', 'dti', 'delinq_2yrs', 'inq_last_6mths',
-                      'open_acc', 'pub_rec', 'revol_bal', 'revol_util', 'total_acc', 'num_emp_length',
-                      'num_of_days', 'sub_grade_ratio', 'purpose_ratio', 'zip_code_ratio']
+                          'open_acc', 'pub_rec', 'revol_bal', 'revol_util', 'total_acc', 'emp_length',
+                          'num_of_year', 'sub_grade_ratio', 'purpose_ratio', 'zip_code_ratio']
+
+
+    BEST_FEATURES = ['revol_util', 'zip_code_ratio', 'annual_inc', 'term', 'int_rate', 'dti', 'home_ownership_RENT', 
+        'purpose_ratio', 'loan_amnt', 'total_acc', 'inq_last_6mths', 'open_acc', 'verification_status_Source Verified', 
+        'delinq_2yrs', 'home_ownership_MORTGAGE', 'revol_bal', 'verification_status_Verified']
                   
 
     ##############################################################################################
@@ -144,14 +186,13 @@ class CreditRisk:
         self.prob_test = None
         self.processed_X_train = None
         self.processed_X_test = None
+        self.df_train = None
+        self.df_test = None
 
 
     ##############################################################################################
-    # Data Processing
+    # Data Understanding
     ##############################################################################################
-    # def  impute_median_na(self, var_list, train_flag=0):
-
-
     def load_dataset(self):
 
         '''
@@ -159,33 +200,44 @@ class CreditRisk:
         data_file = os.path.join(cf.DATA_RAW_PATH, "loan_data_2007_2014.csv")
         self.data = dm.load_csv_data(data_file)
         '''
-
         # get data from s3
         data = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_RAW_PATH + "loan_data_2007_2014.csv")
-
-        # filter data, remove invalid rows
-        data = data[data[self.RAW_TARGET].isin(self.TARGET_VALUE)]
-
         self.data = data
         
-        # Split data to train set and test set       
-        self.X_train, self.X_test, self.y_train, self.y_test = clfu.split_data(self.data, self.data[self.RAW_TARGET])
+
+    def describe_data(self):
+        st.markdown('+ **loan_amnt**: The listed amount of the loan applied for by the borrower. If at some point in time, the credit department reduces the loan amount, then it will be reflected in this value')
 
 
+    def train_test_split(self):
+        self.df_train, self.df_test = clfu.trainset_testset_split(self.data)
+
+
+
+    ##############################################################################################
+    # Data Processing
+    ##############################################################################################
 
     def clean_data(self, df):
 
-        data = df.copy()
+        # Select features of interest
+        data = df[self.ALL_VARS].copy()
+        
+        # select valid rows: target value is in ['Fully Paid', 'Charged Off', 'Default']
+        data = data[data[self.RAW_TARGET].isin(self.TARGET_VALUE)]
 
         # Rename columns
         data.rename(columns=self.FEATURE_MAP, inplace=True)
+        
+        # select valid rows
+        data = self.create_target_value(data)
 
         # data type conversion
         '''
         for key in self.DATA_TYPE:
             data[key] = data[key].astype(self.DATA_TYPE[key])
         '''
-
+        
         # Remove duplicated data
         data = data.drop_duplicates(keep = 'last')
 
@@ -200,40 +252,32 @@ class CreditRisk:
         data = df.copy()
 
         # Convert Class to 1 if the value was 'Fully Paid', 0 is values was {'Charged Off', 'Detault'}
-        data[self.TARGET] = data[self.TARGET].map({'Fully Paid': 0, 'Charged Off': 1, 'Default':  1})
+        data[self.TARGET] = data[self.TARGET].map(self.TARGET_VALUE_MAPPING)
 
+        return data
+    
+    def set_max_threshold(self, df, var, threshold):
+        data = df.copy()
+        data[var] = data[[var]].applymap(lambda x: x if x < threshold else threshold)
+        return data
+    
+    
+    def transform_contvar_binvar(self, df, var, threshold):
+        data = df.copy()
+        data[var] = data[[var]].applymap(lambda x: 0 if x <= threshold else 1)
         return data
 
 
-    def transform_term(self, df, var):
+    def transform_mapping_value(self, df, var, mapping_value):
 
         data = df.copy()
-
-        data[var] = data[var].map({' 36 months': 36, ' 60 months': 60})
-
-        return data
-
-
-    def transform_num_emp_length(self, df, var):
-
-        data = df.copy()
-
-        data['num_emp_length'] = data[var].map({'10+ years':10, 
-                                         '9 years':9, 
-                                         '8 years':8,
-                                         '7 years':7,
-                                         '6 years':6,
-                                         '5 years':5,
-                                         '4 years':4,
-                                         '3 years':3,
-                                         '2 years':2,
-                                         '1 year':1,
-                                         '< 1 year':0.5})
-
+        # To remove white space at both ends
+        data[var] = data[var].str.strip()
+        data[var] = data[var].map(mapping_value)
 
         return data
-
-
+    
+    
     def calculate_class_ratio(self, df, var_list, train_flag=0):
 
         data = df.copy()
@@ -241,9 +285,8 @@ class CreditRisk:
         if(train_flag == 1):
             class_ratio_dict = {}
             for var in var_list:
-                data_train = pd.concat([data, self.y_train])
-                class_0 = data_train[data_train[self.TARGET] == 0].groupby(var).count()[self.TARGET]
-                class_1 = data_train[data_train[self.TARGET] == 1].groupby(var).count()[self.TARGET]
+                class_0 = data[data[self.TARGET] == 0].groupby(var).count()[self.TARGET]
+                class_1 = data[data[self.TARGET] == 1].groupby(var).count()[self.TARGET]
                 class_ratio = class_1/class_0
                 class_ratio_dict[var] = class_ratio
             np.save(credit_risk_class_ratio, class_ratio_dict)
@@ -253,53 +296,21 @@ class CreditRisk:
         for var in var_list:
             class_ratio = class_ratio_dict[var]
             data[var + '_ratio'] = data[var].map(class_ratio)
-            
+           
         return data
-
-
-
-    def replace_categories(self, df, var, target):
-
-        data = df.copy()
-        ordered_labels = data.groupby([var])[target].mean().sort_values().index
-        ordinal_label = {k:i for i,k in enumerate(ordered_labels, 0)}
-        return ordinal_label
-
-
-
-    def encode_categorical_ordinal(self, df, var_list, target, train_flag=0):
-
-        data = df.copy()
-
-        if(train_flag == 1):
-            ordinal_label_dict = {}
-            for var in var_list:
-                ordinal_label = self.replace_categories(data, var, target)
-                ordinal_label_dict[var]= ordinal_label
-            # save the dictionary
-            np.save(house_price_encode_ordinal_label, ordinal_label_dict)
-        else:
-            ordinal_label_dict = np.load(house_price_encode_ordinal_label, allow_pickle=True).item()
-
-        for var in var_list:
-            ordinal_label = ordinal_label_dict[var]
-            data[var] = data[var].map(ordinal_label)
-
-        return data
-
 
 
     def transform_temporal_vars(self, df):
 
         data = df.copy()
-
+        
+        # convert to datetime data
         data['issue_d_date'] = pd.to_datetime(data['issue_d'], format = '%b-%y')
         data['earliest_cr_line_date'] = pd.to_datetime(data['earliest_cr_line'], format = '%b-%y')
-        data['earliest_cr_line_date'] = pd.to_datetime(data['earliest_cr_line'], format = '%b-%y')
-        data['earliest_cr_line_date'] = pd.to_datetime(data['earliest_cr_line'], format = '%b-%y')
-       
-        data['num_of_days'] = data['issue_d_date'] - data['earliest_cr_line_date']
-        data['num_of_days'] = data['num_of_days'].apply(lambda x: x.days)
+        
+        data['issue_d_year'] = data['issue_d_date'].dt.year
+        data['earliest_cr_year'] = data['earliest_cr_line_date'].dt.year
+        data['num_of_year'] = data['issue_d_year'] - data['earliest_cr_year']
 
         return data
 
@@ -314,35 +325,24 @@ class CreditRisk:
                 median_val = data[var].median()
                 median_var_dict[var] = median_val
             # save result
-            np.save(house_price_median_imputer, median_var_dict)
+            np.save(credit_risk_median_imputer, median_var_dict)
         else:
-            median_var_dict = np.load(house_price_median_imputer, allow_pickle=True).item()
+            median_var_dict = np.load(credit_risk_median_imputer, allow_pickle=True).item()
 
         for var in var_list:
             median_var = median_var_dict[var]
-            data[var].fillna(median_val, inplace=True)
+            data[var].fillna(median_var, inplace=True)
 
         return data
 
-
-
-    def impute_na_knn(self, df, var_list, train_flag=0):
-
-        data = df.copy()
-
-        imputer = IterativeImputer(n_nearest_features=None, imputation_order='ascending')
-
-        if(train_flag == 1):
-            imputer.fit(data[var_list])
-            joblib.dump(imputer, house_price_knn_imputer)
-        else:
-            imputer = joblib.load(house_price_knn_imputer)
-
-        data[var_list] = imputer.transform(data[var_list])
-
+    
+    def set_boundary(self, df, var, upper_boundary, lower_boundary):
+        data = df.copy()             
+        data.loc[data[var] <= lower_boundary,var] = lower_boundary
+        data.loc[data[var] >= upper_boundary,var] = upper_boundary
         return data
 
-
+    
     def scaling_data(self, df, var_list, train_flag=0):
 
         data = df.copy()
@@ -374,39 +374,98 @@ class CreditRisk:
             pd.Series(train_dummy).to_csv(credit_risk_dummy_vars, index=False)
         else:
             test_dummy = list(data_categorical.columns)
-            train_dummy = pd.read_csv(credit_risk_dummy_vars)
-            train_dummy.columns = ['Name']
-            train_dummy = list(train_dummy.Name.values)   
+            
+        train_dummy = pd.read_csv(credit_risk_dummy_vars)
+        train_dummy.columns = ['Name']
+        train_dummy = list(train_dummy.Name.values)   
             
         for col in train_dummy:
             if col not in data_categorical:
                 data_categorical[col] = 0
-        if(len(self.DUMMY_VARS) > 0):
-            data_categorical = data_categorical[self.DUMMY_VARS] 
-        
+       
         return data_categorical
+    
+    
+    def data_processing_pipeline1(self, df, train_flag=0):
+        
+        TRAIN_NUM_VARS = ['loan_amnt', 'term', 'int_rate', 'annual_inc', 'dti', 'delinq_2yrs', 'inq_last_6mths',
+                          'open_acc', 'pub_rec', 'revol_bal', 'revol_util', 'total_acc', 'emp_length',
+                          'num_of_year', 'sub_grade_ratio', 'purpose_ratio', 'zip_code_ratio']
+
+        data = self.clean_data(df)
+        # mapping term
+        data = self.transform_mapping_value(data, 'term', self.TERM_MAPPING)
+        # mapping emp_length
+        data = self.transform_mapping_value(data, 'emp_length', self.EMP_LEN_MAPPING)
+        # transform categorical var to num var using class ratio
+        data = self.calculate_class_ratio(data, self.RATIO_VARS, train_flag)
+        # data engineering for temporal vars
+        data = self.transform_temporal_vars(data)
+        # impute missing values
+        data = self.impute_na_median(data, TRAIN_NUM_VARS,train_flag)
+        # scaling numeric vars
+        data_scaled = self.scaling_data(data, TRAIN_NUM_VARS, train_flag)
+        # create dummy vars for categorical vars
+        data_categorical = self.create_dummy_vars(data, self.CATEGORICAL_VARS, train_flag)
+        # combine num vars and cat vars to final dataset
+        data = pd.concat([data_scaled,data_categorical,data[self.TARGET]], axis=1)
+        # define TRAIN_VARS and TRAIN_NUM_VARS
+        self.TRAIN_VARS = data.drop([self.TARGET],axis=1).columns
+        self.TRAIN_NUM_VARS = data_scaled.columns
+        self.TRAIN_DUM_VARS = data_categorical.columns
+        
+        return data
+    
+    
+    def data_processing_pipeline2(self, df, train_flag=0):
+        
+        TRAIN_NUM_VARS = ['loan_amnt', 'term', 'int_rate', 'annual_inc', 'dti', 'delinq_2yrs', 'inq_last_6mths',
+                          'open_acc', 'pub_rec', 'revol_bal', 'revol_util', 'total_acc', 'emp_length',
+                          'num_of_year', 'sub_grade_ratio', 'purpose_ratio', 'zip_code_ratio']
+
+        data = self.clean_data(df)
+        # combine several values in one group
+        data = self.set_max_threshold(data, 'inq_last_6mths', 6)
+        data = self.transform_contvar_binvar(data, 'pub_rec', 3)
+        data = self.transform_contvar_binvar(data, 'delinq_2yrs', 3)
+        # mapping term
+        data = self.transform_mapping_value(data, 'term', self.TERM_MAPPING)
+        # mapping emp_length
+        data = self.transform_mapping_value(data, 'emp_length', self.EMP_LEN_MAPPING)
+        # set limit for outliers
+        data = self.set_boundary(data, 'annual_inc', 250697, -119558)
+        data = self.set_boundary(data, 'revol_bal', 71467, -46514)
+        data = self.set_boundary(data, 'revol_util', 223, -111)
+        # transform categorical var to num var using class ratio
+        data = self.calculate_class_ratio(data, self.RATIO_VARS, train_flag)
+        # data engineering for temporal vars
+        data = self.transform_temporal_vars(data)
+        # impute missing values
+        data = self.impute_na_median(data, TRAIN_NUM_VARS,train_flag)
+        # scaling numeric vars
+        data_scaled = self.scaling_data(data, TRAIN_NUM_VARS, train_flag)
+        # create dummy vars for categorical vars
+        data_categorical = self.create_dummy_vars(data, self.CATEGORICAL_VARS, train_flag)
+        # combine num vars and cat vars to final dataset
+        data = pd.concat([data_scaled,data_categorical,data[self.TARGET]], axis=1)
+        # define TRAIN_VARS and TRAIN_NUM_VARS
+        self.TRAIN_VARS = data.drop([self.TARGET],axis=1).columns
+        self.TRAIN_NUM_VARS = data_scaled.columns
+        self.TRAIN_DUM_VARS = data_categorical.columns
+       
+        return data
 
 
-    def data_processing_pipeline(self, df, train_flag=0):
-
-        df = self.clean_data(df)
-        df = self.create_target_value(df)
-        df = self.transform_term(df, 'term')
-        df = self.transform_num_emp_length(df, 'emp_length')
-        df = self.calculate_class_ratio(df, self.RATIO_VARS, train_flag)
-        df = self.transform_temporal_vars(df)
-        data_scaled = self.scaling_data(df, self.TRAIN_NUM_VARS, train_flag)
-        data_categorical = self.create_dummy_vars(df, self.CATEGORICAL_VARS, train_flag)
-        df = pd.concat([data_scaled,data_categorical], axis=1)
-
-        return df
 
 
     def prepare_dataset(self):
 
         # get data from s3
-        df_train = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'loan_data_2007_2014_train.csv')
-        df_test = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'loan_data_2007_2014_test.csv')
+        df_train = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'loan_data_pipeline2_train.csv')
+        df_test = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'loan_data_pipeline2_test.csv')
+        self.TRAIN_VARS = df_train.drop([self.TARGET],axis=1).columns
+
+        st.write(df_train.head())
         
         self.processed_X_train = df_train[self.TRAIN_VARS]
         self.y_train = df_train[self.TARGET]
@@ -436,17 +495,19 @@ class CreditRisk:
 
         # get train set and test set
         self.prepare_dataset()
+        self.processed_X_train = self.processed_X_train[self.BEST_FEATURES]
+        self.processed_X_test = self.processed_X_test[self.BEST_FEATURES]
+        st.write(self.processed_X_train.head())
 
         # Train model
         model = LogisticRegression(C=1e9, solver='lbfgs')
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
-        # joblib.dump(model, cf.TRAINED_MODEL_PATH + '/credit_risk_logistic_regression.pkl')
-
+        joblib.dump(model, cf.TRAINED_MODEL_PATH + '/credit_risk_logistic_regression.pkl')
 
         # Result Summary Table
         st.markdown('#### Result Summary Table')
-        summary_table = pd.DataFrame(columns=['FeatureName'], data=self.TRAIN_VARS)
+        summary_table = pd.DataFrame(columns=['FeatureName'], data=self.BEST_FEATURES)
         summary_table['Coefficient'] = np.transpose(model.coef_)
         summary_table.index = summary_table.index + 1
         summary_table = summary_table.sort_index()
@@ -456,8 +517,8 @@ class CreditRisk:
         st.write('--------------------------------------------------')
 
         # Prediction
-        self.prediction()
-
+        self.pred_train, self.prob_train  = self.prediction(self.processed_X_train)
+        self.pred_test, self.prob_test  = self.prediction(self.processed_X_test)
         # prediction with threshold
         self.pred_train = np.where(self.prob_train[:,1] > threshold, 1, 0)       
         self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0)   
@@ -505,36 +566,15 @@ class CreditRisk:
         fig.savefig(buf, format="png")
         st.image(buf)
 
-
-
-    def lasso_analysis(self):
-
-        # get train set and test set
-        self.prepare_dataset()
-
-        # Train model
-        model = LogisticRegression(penalty='l1', solver='liblinear')
-        model.fit(self.processed_X_train, self.y_train)
-        self.model = model
-
-        # Result Summary Table
-        st.markdown('#### Result Summary Table')
-        summary_table = pd.DataFrame(columns=['FeatureName'], data=self.TRAIN_VARS)
-        summary_table['Coefficient'] = np.transpose(model.coef_)
-        summary_table.index = summary_table.index + 1
-        summary_table = summary_table.sort_index()
-        summary_table['OddsRatio'] = np.exp(np.abs(summary_table.Coefficient))
-        summary_table = summary_table.sort_values('OddsRatio', ascending=False)
-        st.write(summary_table)
-        st.write('--------------------------------------------------')
-
-        # Prediction
-        self.prediction()
-
-        # Performance Evaluation
-        st.markdown("#### Performance Evaluation")
-        self.evaluate_performance()
-
+        st.write('Prediction')
+        # prediction with threshold
+        self.pred_train = np.where(self.prob_train[:,1] > 0.2, 1, 0)       
+        self.pred_test = np.where(self.prob_test[:,1] > 0.2, 1, 0)   
+        prediction_df= pd.DataFrame()
+        prediction_df['True_Outcome'] = self.y_train
+        prediction_df['Prediction'] = self.pred_train
+        prediction_df['Probability'] = self.prob_train[:,1]
+        st.write(prediction_df.head(20))
 
     
     def features_importance(self):
@@ -799,12 +839,10 @@ class CreditRisk:
     ##############################################################################################
     # Model Evaluation
     ##############################################################################################
-    def prediction(self):
-        self.pred_train = self.model.predict(self.processed_X_train)
-        self.prob_train = self.model.predict_proba(self.processed_X_train)
+    def prediction(self, data):
 
-        self.pred_test = self.model.predict(self.processed_X_test)
-        self.prob_test = self.model.predict_proba(self.processed_X_test)
+        return self.model.predict(data), self.model.predict_proba(data)
+
 
 
     def evaluate_performance(self):

@@ -138,8 +138,10 @@ class Stock:
         # scale data
         scaler = MinMaxScaler(feature_range = (0, 1))
         train_scaled = scaler.fit_transform(X_train_value)
-        dataset_total = pd.concat((self.train_data['Close'], self.test_data['Close']), axis = 0)
-        inputs = dataset_total[len(dataset_total) - len(self.test_data) - 60:].values
+        #dataset_total = pd.concat((self.train_data['Close'], self.test_data['Close']), axis = 0)
+        dataset_total = pd.concat((self.train_data, self.test_data), axis = 0)
+        self.input_ds = dataset_total[len(dataset_total) - len(self.test_data) - 60:]
+        inputs = dataset_total[len(dataset_total) - len(self.test_data) - 60:]['Close'].values
         inputs = inputs.reshape(-1,1)
         inputs = scaler.transform(inputs)
 
@@ -166,22 +168,37 @@ class Stock:
 
     @st.cache(show_spinner=False)
     def train_model(self):
-        # LSTM architecture
+
+        tf.random.set_seed(42)
+        np.random.seed(42)
         keras.backend.clear_session()
-        # initialize LSTM
-        regressor = Sequential()
+        tf.keras.backend.clear_session()
+        # LSTM architecture
+         # initialize LSTM
+        model = Sequential()
         # Add 1st layer
-        regressor.add(LSTM(units = 100, input_shape = (self.X_train.shape[1], 1)))
-        regressor.add(Dropout(0.2))
+        model.add(LSTM(units = 100, input_shape = (self.X_train.shape[1], 1)))
+        model.add(Dropout(0.2))
         # Adding the output layer
-        regressor.add(Dense(units = 1))
+        model.add(Dense(units = 1))
         # Compiling model
-        regressor.compile(optimizer = 'adam', loss = 'mean_squared_error')
-        regressor.fit(self.X_train, self.y_train, epochs = 30, batch_size = 30)
+        model.compile(optimizer = 'adam', loss = 'mean_squared_error')
+        model.fit(self.X_train, self.y_train, epochs = 30, batch_size = 30)
         # predict
-        pred_test = regressor.predict(self.X_test)
+        pred_test = model.predict(self.X_test)
         pred_test = pred_test.reshape(-1,1)
-        self.test_data["pred_test"] = self.scaler.inverse_transform(pred_test)      
+        self.test_data["pred_test"] = self.scaler.inverse_transform(pred_test)
+ 
+        # forecast
+        scaled_forecast = []  
+        first_batch = self.X_test[0]
+        forecast_batch = first_batch.reshape((1, 60, 1))
+        for i in range(60, len(self.test_data) + 60):
+            forecast_val = model.predict(forecast_batch)[0]
+            scaled_forecast.append(forecast_val) 
+            forecast_batch = np.append(forecast_batch[:,1:,:],[[forecast_val]],axis=1)
+        true_forecast = self.scaler.inverse_transform(scaled_forecast)  
+        self.test_data["forecast"] = true_forecast
 
 
     def plot_test(self):
@@ -189,10 +206,11 @@ class Stock:
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
-                x=self.test_data["date"],
-                y=self.test_data["Close"],
+                x=self.input_ds["date"],
+                y=self.input_ds["Close"],
                 mode="lines",
                 name="True Closing price",
+                line_color="orange"
             )
         )
 
@@ -202,7 +220,16 @@ class Stock:
                 y=self.test_data["pred_test"],
                 mode="lines",
                 name="Predicted CLosing price",
-                line_color="orange"
+            )
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=self.test_data["date"],
+                y=self.test_data["forecast"],
+                mode="lines",
+                name="Forecast CLosing price",
+                line_color="green"
             )
         )
 
