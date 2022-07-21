@@ -46,14 +46,18 @@ class MultiPage:
 			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> House Price Analysis & Prediction</p>'
 		if(page['title'] == '02-Classification Application'):
 			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Credit Risk Analysis & Prediction</p>'
-		if(page['title'] == '03-Unsupervised Application'):
-			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Dimensionality Reduction & Clustering</p>'
-		if(page['title'] == '04-Time Series Application'):
-			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Stock Forecast Dashboard</p>'
+		if(page['title'] == '03-Financial Analysis Application'):
+			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Coin Trading Application</p>'
+		if(page['title'] == '04-Unsupervised Application'):
+			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Topic Modeling</p>'
+		#if(page['title'] == '04-Time Series Application'):
+			#title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Stock Forecast Dashboard</p>'
 		if(page['title'] == '05-NLP Application'):
 			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Hotel Recommendation</p>'
 		if(page['title'] == '06-Recommender System Application'):
 			title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Online Shopping Recommendation</p>'
+		#if(page['title'] == '08-Financial Analysis Application'):
+			#title = '<p style="font-family:sans-serif; color:Pink; font-size: 40px;"> Financial Analysis Application</p>'
 
 
 		self.col.markdown(title, unsafe_allow_html=True)

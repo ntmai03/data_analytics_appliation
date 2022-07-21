@@ -1,13 +1,50 @@
+BITCOIN_SYMBOL:
+- Select symbol
+- FILUSDT
+- BNBUSDT
+- ETCUSDT
+- DOTUSDT
+- XTZUSDT
+- WAVESUSDT
+- LPTUSDT
+- TRBUSDT
+- BNBUSDT
+- FXSUSDT
+- ADAUSDT
+- FTTUSDT
+- DOGEUSDT
+BITCOIN_TIME_INTERVAL:
+- 1d
+- 6h
+- 1h
+- 30m
+- 15m
+BITCOIN_TRADING_INTERVAL:
+- 15m
+- 6h
+- 1h
+- 30m
+- 1d
+autoencoder_n_epoch: 20
+default_num_of_day: 100
+default_start_trading: 7
 dest_id:
   London: '-2601889'
-  New york: '20088325'
-  Oxford: '-2604911'
   Paris: '-1456928'
+  Rome: '-126693'
 dest_name:
   London: london
-  New york: new york
-  Oxford: oxford
   Paris: paris
+  Rome: rome
+house_price_data_file: kc_house_data.csv
+house_price_dummy_vars: house_price_dummy_vars.npy
+house_price_encode_ordinal_label: house_price_encode_ordinal_label.npy
+house_price_knn_imputer: house_price_knn_imputer.npy
+house_price_median_imputer: house_price_median_imputer.npy
+house_price_scaler: house_price_scaler.pkl
+houseprice_test: houseprice_test.csv
+houseprice_train: houseprice_train.csv
+num_of_comments_per_page: 20
+num_of_hotels_per_page: 20
 package_name: data-tool
 review_num_of_page: 5
-autoencoder_n_epoch: 20

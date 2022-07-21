@@ -12,6 +12,7 @@ from page import hotel_recommendation
 from page import unsupervised_techniques
 from page import credit_risk_analysis
 from page import shopping_recommendation
+from page import coin_trading
 
 # Config layout
 st.set_page_config(layout="wide", initial_sidebar_state="expanded")
@@ -32,14 +33,6 @@ with col2:
 with col3:
 	st.markdown("written by [Mai Nguyen](https://www.linkedin.com/in/ntmai03/)")
 
-#col1, col2 = st.columns(2)
-#col1.image(display, width = 400)
-#new_title = '<p style="font-family:sans-serif; color:LightGreen; font-size: 42px;">Data Analytics Application</p>'
-#col2.markdown(new_title, unsafe_allow_html=True)
-
-
-#col2.header('Data Analytics Application')
-
 # Create an instance of the app
 app = MultiPage(col1)
 
@@ -47,8 +40,9 @@ app = MultiPage(col1)
 app.add_page("Select Application", introduction.app)
 app.add_page("01-Regression Application", houseprice_analysis.app)
 app.add_page("02-Classification Application", credit_risk_analysis.app)
-app.add_page("03-Unsupervised Application", unsupervised_techniques.app)
-app.add_page("04-Time Series Application", time_series.app)
+app.add_page("03-Financial Analysis Application", coin_trading.app)
+app.add_page("04-Unsupervised Application", unsupervised_techniques.app)
+#app.add_page("04-Time Series Application", time_series.app)
 app.add_page("05-NLP Application", hotel_recommendation.app)
 app.add_page("06-Recommender System Application", shopping_recommendation.app)
 
