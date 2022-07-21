@@ -33,6 +33,7 @@ wordcloud
 
 # for trading
 python-binance
+talib
 
 # for graph
 # networkx
