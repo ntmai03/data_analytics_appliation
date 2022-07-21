@@ -13,7 +13,7 @@ from io import BytesIO
 # for plotting
 import matplotlib.pyplot as plt
 import seaborn as sns
-import talib
+import pandas_ta
 
 import config as cf
 
@@ -178,7 +178,7 @@ class Coin_Trading:
         data = self.data.copy()
         
         data['sma'] = data['price'].rolling(sma_period).mean()
-        data['rsi'] = talib.RSI(data['sma'], rsi_period)
+        data['rsi'] = pta.rsi(data['sma'], length = rsi_period)
         data['rsi_indicator'] = np.nan
         data['rsi_signal'] = np.nan
         data['position'] = current_position
@@ -415,7 +415,7 @@ class Coin_Trading:
         data = self.data.copy()
         
         data['sma'] = data['price'].rolling(sma_period).mean()
-        data['rsi'] = talib.RSI(data['sma'], rsi_period)
+        data['rsi'] = pta.rsi(data['sma'], length = rsi_period)
         data['rsi_indicator'] = np.nan
         data['rsi_signal'] = np.nan
         data['position'] = current_position
