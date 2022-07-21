@@ -568,8 +568,8 @@ class HousePrice:
         st.markdown('#### Visualize the tree')
         graph = Source(sklearn.tree.export_graphviz(
                 model,
-                #out_file="kchouse_tree.dot",
-                out_file=None,
+                out_file="kchouse_tree.dot",
+                #out_file=None,
                 feature_names=self.TRAIN_VARS,
                 class_names='price',
                 special_characters=False,

@@ -229,7 +229,7 @@ class HotelRecommendation:
         # Set values for various parameters
         feature_size = 300    # Word vector dimensionality  
         window_context = 30          # Context window size                                                                                    
-        min_word_count = 10   # Minimum word count                        
+        min_word_count = 1   # Minimum word count                        
         sample = 1e-3   # Downsample setting for frequent words
 
         st.markdown('#### Transforming text to numeric features using word embedding technique')
@@ -244,7 +244,7 @@ class HotelRecommendation:
         # download and train pretrained word embedding
         EMBEDDING_FILE = 'GoogleNews-vectors-negative300.bin.gz'
         cf.S3_CLIENT.download_file(cf.S3_DATA_PATH, "/".join([cf.S3_DATA_BOOKING, EMBEDDING_FILE]), EMBEDDING_FILE)
-        pretrained_model = Word2Vec(size = 300, window=window_context, min_count = 1, workers=-1)
+        pretrained_model = Word2Vec(size = feature_size, window=window_context, min_count = min_word_count, workers=-1)
         pretrained_model.build_vocab(tokenized_corpus)
         pretrained_model.intersect_word2vec_format(EMBEDDING_FILE, lockf=1.0, binary = True)
         pretrained_model.train(tokenized_corpus, total_examples=pretrained_model.corpus_count, epochs = 5)
@@ -702,6 +702,7 @@ class HotelRecommendation:
         house_df = house_df[house_df.Cluster == cluster_id].reset_index(drop=True)
         house_obj1 = []
         house_obj2 = []
+        graph_df = pd.DataFrame()
 
         for i in range(0, len(house_df)):
             sent = house_df.text[i]
@@ -710,20 +711,19 @@ class HotelRecommendation:
             house_obj1 = house_obj1 + obj1
             house_obj2 = house_obj2 + obj2
 
-            graph_df = pd.DataFrame()
-            graph_df['obj1'] = house_obj1
-            graph_df['obj2'] = house_obj2
-            graph_df['ID'] = range(0,len(graph_df))
-            graph_df = graph_df[graph_df.obj2 != 'NA']
+        graph_df['obj1'] = house_obj1
+        graph_df['obj2'] = house_obj2
+        graph_df['ID'] = range(0,len(graph_df))
+        graph_df = graph_df[graph_df.obj2 != 'NA']
 
-            graph_df['obj1_type'] = graph_df['obj1'].apply(lambda x:nlp(x)[0].pos_)
-            graph_df['obj2_type'] = graph_df['obj2'].apply(lambda x:nlp(x)[0].pos_)
+        graph_df['obj1_type'] = graph_df['obj1'].apply(lambda x:nlp(x)[0].pos_)
+        graph_df['obj2_type'] = graph_df['obj2'].apply(lambda x:nlp(x)[0].pos_)
 
-            lem = nltk.stem.wordnet.WordNetLemmatizer()
-            graph_df['obj1'] = graph_df['obj1'].apply(lambda x: str.lower(x))
-            graph_df['obj2'] = graph_df['obj2'].apply(lambda x: str.lower(x))
-            graph_df['obj1'] = graph_df['obj1'].apply(lambda x: lem.lemmatize(x))
-            graph_df['obj2'] = graph_df['obj2'].apply(lambda x: lem.lemmatize(x))
+        lem = nltk.stem.wordnet.WordNetLemmatizer()
+        graph_df['obj1'] = graph_df['obj1'].apply(lambda x: str.lower(x))
+        graph_df['obj2'] = graph_df['obj2'].apply(lambda x: str.lower(x))
+        graph_df['obj1'] = graph_df['obj1'].apply(lambda x: lem.lemmatize(x))
+        graph_df['obj2'] = graph_df['obj2'].apply(lambda x: lem.lemmatize(x))
             
         return house_df,  graph_df
 

@@ -67,7 +67,7 @@ credit_risk_median_imputer = os.path.join(cf.ANALYSIS_PATH, 'credit_risk_median_
 credit_risk_knn_imputer = os.path.join(cf.ANALYSIS_PATH, 'credit_risk_knn_imputer.npy')
 credit_risk_scaler = os.path.join(cf.ANALYSIS_PATH, 'credit_risk_scaler.pkl')
 credit_risk_dummy_vars = os.path.join(cf.ANALYSIS_PATH, 'credit_risk_dummy_vars.npy')
-
+threshold = 0.5
 
 class CreditRisk:
     """
@@ -432,12 +432,13 @@ class CreditRisk:
         data = self.transform_mapping_value(data, 'term', self.TERM_MAPPING)
         # mapping emp_length
         data = self.transform_mapping_value(data, 'emp_length', self.EMP_LEN_MAPPING)
+        # transform categorical var to num var using class ratio
+        data = self.calculate_class_ratio(data, self.RATIO_VARS, train_flag)
         # set limit for outliers
         data = self.set_boundary(data, 'annual_inc', 250697, -119558)
         data = self.set_boundary(data, 'revol_bal', 71467, -46514)
         data = self.set_boundary(data, 'revol_util', 223, -111)
-        # transform categorical var to num var using class ratio
-        data = self.calculate_class_ratio(data, self.RATIO_VARS, train_flag)
+        data = self.set_boundary(data, 'zip_code_ratio', 0.543, -0.079)
         # data engineering for temporal vars
         data = self.transform_temporal_vars(data)
         # impute missing values
@@ -615,6 +616,13 @@ class CreditRisk:
         st.markdown('#### Feature Importance')
         clfu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
 
+        # Prediction
+        self.pred_train, self.prob_train  = self.prediction(self.processed_X_train)
+        self.pred_test, self.prob_test  = self.prediction(self.processed_X_test)
+        # prediction with threshold
+        self.pred_train = np.where(self.prob_train[:,1] > threshold, 1, 0)       
+        self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
+
         # Performance Evaluation
         self.evaluate_performance()
 
@@ -656,6 +664,13 @@ class CreditRisk:
         st.markdown('#### Feature Importance')
         clfu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
 
+        # Prediction
+        self.pred_train, self.prob_train  = self.prediction(self.processed_X_train)
+        self.pred_test, self.prob_test  = self.prediction(self.processed_X_test)
+        # prediction with threshold
+        self.pred_train = np.where(self.prob_train[:,1] > threshold, 1, 0)       
+        self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
+
         # Performance Evaluation
         self.evaluate_performance()
 
@@ -680,6 +695,13 @@ class CreditRisk:
         # important features
         st.markdown('#### Feature Importance')
         clfu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
+
+        # Prediction
+        self.pred_train, self.prob_train  = self.prediction(self.processed_X_train)
+        self.pred_test, self.prob_test  = self.prediction(self.processed_X_test)
+        # prediction with threshold
+        self.pred_train = np.where(self.prob_train[:,1] > threshold, 1, 0)       
+        self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
 
         # Performance Evaluation
         self.evaluate_performance()
@@ -739,6 +761,13 @@ class CreditRisk:
         st.markdown('#### Feature Importance')
         clfu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
 
+        # Prediction
+        self.pred_train, self.prob_train  = self.prediction(self.processed_X_train)
+        self.pred_test, self.prob_test  = self.prediction(self.processed_X_test)
+        # prediction with threshold
+        self.pred_train = np.where(self.prob_train[:,1] > threshold, 1, 0)       
+        self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
+
         # Performance Evaluation
         self.evaluate_performance()
 
@@ -757,6 +786,13 @@ class CreditRisk:
         # Model parameters
         st.markdown('#### Hyper-parameters of model')
         st.write(model.get_params())
+
+        # Prediction
+        self.pred_train, self.prob_train  = self.prediction(self.processed_X_train)
+        self.pred_test, self.prob_test  = self.prediction(self.processed_X_test)
+        # prediction with threshold
+        self.pred_train = np.where(self.prob_train[:,1] > threshold, 1, 0)       
+        self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
 
         # Performance Evaluation
         self.evaluate_performance()
@@ -777,6 +813,13 @@ class CreditRisk:
         st.markdown('#### Hyper-parameters of model')
         st.write(model.get_params())
 
+        # Prediction
+        self.pred_train, self.prob_train  = self.prediction(self.processed_X_train)
+        self.pred_test, self.prob_test  = self.prediction(self.processed_X_test)
+        # prediction with threshold
+        self.pred_train = np.where(self.prob_train[:,1] > threshold, 1, 0)       
+        self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
+
         # Performance Evaluation
         self.evaluate_performance()
 
@@ -795,6 +838,13 @@ class CreditRisk:
         # Model parameters
         st.markdown('#### Hyper-parameters of model')
         st.write(model.get_params())
+
+        # Prediction
+        self.pred_train, self.prob_train  = self.prediction(self.processed_X_train)
+        self.pred_test, self.prob_test  = self.prediction(self.processed_X_test)
+        # prediction with threshold
+        self.pred_train = np.where(self.prob_train[:,1] > threshold, 1, 0)       
+        self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
 
         # Performance Evaluation
         self.evaluate_performance()
@@ -848,7 +898,6 @@ class CreditRisk:
     def evaluate_performance(self):
 
         # model prediction
-        self.prediction()
         st.markdown('#### Performance Evaluation for Train data')
         clfu.display_model_performance_metrics(true_labels=self.y_train, 
                                                predicted_labels=self.pred_train, 
