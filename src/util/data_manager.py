@@ -6,12 +6,8 @@ import csv
 from pathlib import Path
 import boto3
 from botocore.exceptions import ClientError
-
 import pandas as pd
-# split data
 from sklearn.model_selection import train_test_split
-
-#sys.path.append('src')
 
 import config as cf
 

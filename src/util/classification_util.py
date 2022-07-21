@@ -106,7 +106,7 @@ def select_threshold(label, y_score):
 
 
 
-def split_data(X, y, test_size=0.2, random_state=0):
+def split_data(X, y, test_size=0.2, random_state=42):
     
     X_train, X_test, y_train, y_test = train_test_split(X, y, 
                                                         test_size=test_size, 
@@ -119,6 +119,21 @@ def split_data(X, y, test_size=0.2, random_state=0):
     y_test = y_test.reset_index(drop=True)
 
     return X_train, X_test, y_train, y_test
+
+
+def trainset_testset_split(df, test_size=0.2, random_state=42):   
+    train_set, test_set = train_test_split(df, test_size=test_size, random_state=random_state)
+    train_set = train_set.reset_index(drop=True)
+    test_set = test_set.reset_index(drop=True)
+
+    return train_set, test_set
+
+
+def show_missing_data(df):
+    miss_val_df = pd.DataFrame(df.isnull().sum(), columns=['Count'])
+    miss_val_df['Percentage'] = 100 * df.isnull().sum()/len(df)
+    miss_val_df = miss_val_df.sort_values('Percentage', ascending=False)
+    return miss_val_df
     
 
 def get_metrics(true_labels, predicted_labels, predicted_prob):
@@ -173,9 +188,9 @@ def feature_importance(feature_importance, TRAIN_VARS):
     feature_importance.index = TRAIN_VARS
     feature_importance.sort_values(inplace=True,ascending=True)
 
-    fig, axes = plt.subplots(1,2,figsize=(6,7))
-    feature_importance.plot.barh()
-    plt.ylabel('Multivariate Linear Regression')
+    fig, axes = plt.subplots(1,1,figsize=(7,8))
+    feature_importance.plot.bar()
+    plt.ylabel('Weight')
     plt.title('Feature Importance')
     buf = BytesIO()
     fig.savefig(buf, format="png")
@@ -227,3 +242,42 @@ def plot_precision_recall_curve(ax, label, y_score):
     ax.set_xlabel('Threshold')
     ax.set_ylabel('Precision/Recall')
     ax.legend()
+
+
+def plot_target_distribution(df):
+    fig, ax = plt.subplots(1,2,figsize=(10,4))
+
+    colors = ['#3791D7','#D72626']
+    labels = ['Good Loans', 'Bad Loans']
+
+    plt.suptitle('Information on Loan Condition', fontsize=20)
+    df['Class'].value_counts().plot.pie(explode=[0,0.15], autopct='%1.1f%%',ax=ax[0],shadow=True, colors=colors,labels=labels,fontsize=10,startangle=70)
+    ax[0].set_ylabel('% of Condition of Loans', fontsize=14)
+
+    palette = ['#3791D7','#D72626']
+    sns.countplot(x='Class', data=df, palette=palette)
+    ax[1].set(ylabel="(%)")
+    buf = BytesIO()
+    fig.savefig(buf, format="png")
+    st.image(buf)
+
+
+def plot_continuous_distribution(df, cont_vars):
+    c0_df = df.loc[df.Class == 1,:]
+    c1_df =  df.loc[df.Class == 0,:]
+    colors = ['#3791D7','#D72626']
+
+    for column_header in cont_vars:
+        print(column_header)    
+        fig, ax = plt.subplots(1,2,figsize=(10,4))
+        plt.subplot(121)
+        sns.boxplot(x='Class', y=column_header,data=df,palette=colors)
+        plt.title(column_header, fontsize=12)
+        plt.subplot(122)
+        sns.kdeplot(c1_df[column_header], bw = 0.4, label = "Fully Paid", shade=True, color='#3791D7', linestyle="--")
+        sns.kdeplot(c0_df[column_header], bw = 0.4, label = "Charged Off", shade=True, color= '#D72626', linestyle=":")
+        plt.title(column_header, fontsize=12)
+        buf = BytesIO()
+        fig.savefig(buf, format="png")
+        st.image(buf)
+
