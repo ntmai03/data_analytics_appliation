@@ -45,8 +45,10 @@ def app():
 		model_name = ['Select model...',
 					  'Item_Item_CF']
 		model_option = st.sidebar.selectbox('', model_name)
+
+		
 		if model_option == 'Item_Item_CF':
 			shopping = ShoppingRecommendation()
-			shopping.ItemItemCF(710)
+			shopping.Train_ItemItemCF(710)
 
 
