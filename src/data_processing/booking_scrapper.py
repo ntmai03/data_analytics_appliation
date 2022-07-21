@@ -48,6 +48,7 @@ class BookingScrapper():
         self.city = None   
        
     
+    '''
     def get_api_header(self):
         headers = {
             'x-rapidapi-key': "a8b6fd745amshd1ae2e4a39d3950p193801jsn3549c554af64",
@@ -55,7 +56,8 @@ class BookingScrapper():
         } 
         
         return headers
-    
+    '''
+
     
     def get_structure(self):
         """
@@ -85,6 +87,7 @@ class BookingScrapper():
         return dest_id, nr_hotels
 
 
+
     """
     Get list of hotels store results in json file and store a summerized main info in a csv file
     """
@@ -94,16 +97,16 @@ class BookingScrapper():
         st.markdown('#### Start downloading hotels and storing on S3 ')
 
         # set a checkin date, checkout date in the future to get data
-        in_d = datetime.datetime.today() + datetime.timedelta(days=100)
+        in_d = datetime.datetime.today() + datetime.timedelta(days=cf.data['default_num_of_day'])
         in_d = str(in_d.year) + '-' + str(in_d.month)  + '-' +  str(in_d.day)
-        out_d = datetime.datetime.today() + datetime.timedelta(days=101)
+        out_d = datetime.datetime.today() + datetime.timedelta(days=cf.data['default_num_of_day'] + 1)
         out_d = str(out_d.year) + '-' + str(out_d.month)  + '-' +  str(out_d.day)
 
         # Define search conditions through setting values for paramters in url's request
         booking_list = []
-        nr_pages = int(np.round(nr_hotels/20))
+        nr_pages = int(np.round(nr_hotels/cf.data['num_of_hotels_per_page']))
         st.markdown('#### Number of pages to download: ')
-        st.write(str(nr_pages))
+        st.write('Number of pages: ',  str(nr_pages))
         st.write('Page number: ')
         for page_numer in range(0, nr_pages):
             st.write(page_numer)
@@ -144,7 +147,9 @@ class BookingScrapper():
                           data=booking_list, type='s3')
 
         st.markdown('#### Finished downloading hotels and storing on S3')
+        st.write(booking_list.head(10))
         
+
     
     """
     Get reviews of a hotel and store them json file
