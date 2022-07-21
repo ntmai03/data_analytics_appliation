@@ -33,8 +33,7 @@ wordcloud
 
 # for trading
 python-binance
-ta-lib
-http://prdownloads.sourceforge.net/ta-lib/ta-lib-0.4.0-src.tar.gz
+pandas_ta
 
 # for graph
 # networkx
