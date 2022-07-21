@@ -171,7 +171,7 @@ class BookingScrapper():
                 review_querystring = {"sort_type":"SORT_MOST_RELEVANT","locale":"en-gb",
                               "hotel_id":accommodation_id,"language_filter":"en-gb",
                               "page_number": page_number}
-                headers = self.get_api_header()                
+                headers = cf.BOOKING_RAPIDAPID_QUERYSTRING               
                 structure = self.get_structure()
                 try:
                     data = {}
