@@ -51,8 +51,8 @@ BOOKING_RAPIDAPID_QUERYSTRING = {
         }
 
 # binance account
-binance_api_key =  st.secrets["binance_access_key_id"],
-binance_secret_key = st.secrets["binance_secret_access_key"],
+binance_api_key =  st.secrets["binance_access_key_id"]
+binance_secret_key = st.secrets["binance_secret_access_key"]
 
 
 """
