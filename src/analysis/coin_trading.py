@@ -13,7 +13,7 @@ from io import BytesIO
 # for plotting
 import matplotlib.pyplot as plt
 import seaborn as sns
-import pandas_ta
+import pandas_ta as pta
 
 import config as cf
 
