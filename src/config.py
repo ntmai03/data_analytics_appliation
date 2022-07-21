@@ -26,7 +26,10 @@ S3_DATA_PATH = 'datool-data'
 S3_DATA_RAW_PATH = 'raw/'
 S3_DATA_PROCESSED_PATH = 'processed/'
 
-# Creating the low level functional client
+"""
+# Get  key ans secret to access resources
+"""
+# get s3 data on AWS
 S3_CLIENT = boto3.client(
     's3',
     aws_access_key_id = st.secrets["aws_access_key_id"],
@@ -41,6 +44,17 @@ S3_RESOURCE = boto3.resource(
     region_name = st.secrets["region_name"] 
 )
 
+# get booking data
+BOOKING_RAPIDAPID_QUERYSTRING = {
+            'x-rapidapi-key': st.secrets["rapidapid_booking_key"],
+            'x-rapidapi-host': "booking-com.p.rapidapi.com"
+        }
+
+# binance account
+binance_api_key =  st.secrets["binance_access_key_id"],
+binance_secret_key = st.secrets["binance_secret_access_key"],
+
+
 """
 CONFIF FOR HOTEL RECOMMENDATION APP
 """
@@ -53,10 +67,7 @@ HOTEL_LIST_FILE = 'booking_list.csv'
 # BOOKING_SEARCH_URL
 BOOKING_SEARCH_HOTEL = 'https://booking-com.p.rapidapi.com/v1/hotels/search'
 BOOKING_SEARCH_LOCATION = 'https://booking-com.p.rapidapi.com/v1/hotels/locations'
-BOOKING_RAPIDAPID_QUERYSTRING = {
-            'x-rapidapi-key': st.secrets["rapidapid_booking_key"],
-            'x-rapidapi-host': "booking-com.p.rapidapi.com"
-        }
+
 
 
 
