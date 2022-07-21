@@ -33,7 +33,7 @@ wordcloud
 
 # for trading
 python-binance
-talib==0.4.19
+ta-lib
 
 # for graph
 # networkx
