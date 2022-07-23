@@ -36,8 +36,10 @@ def app():
 	if task_option == 'Introduction':
 		st.markdown('<p style="color:lightgreen; font-size: 25px;"> Business Objective</p>', unsafe_allow_html=True)
 		st.write("Real estate agents need a software tool that helps them value homes in a specific area at the push of a button. This tool needs to output a benchmark price based on the characteristics of the house such as how many rooms the home has or how much crime there is in the area plus a whole bunch of factors. Also, agents want to see the contribution of each factor in predictive model, which features of a house are more important in determining the house price and which factors are less important in determining the house price. In other words this valuation tool needs to be tractable.")
+		
 		st.markdown('<p style="color:lightgreen; font-size: 25px;"> Defining Problem</p>', unsafe_allow_html=True)
 		st.write("It is a regression problem, the analysis applies techniques like linear regression, non-linear regression to build the predictive model that allows to predict price of a given house")
+
 		st.markdown('<p style="color:lightgreen; font-size: 25px;"> Notebook</p>', unsafe_allow_html=True)
 		st.write("More details and explanations at https://github.com/ntmai03/DataAnalysisProject/tree/main/01-Regression")
 
@@ -47,25 +49,22 @@ def app():
 
 		# initialize HousePrice object for performing tasks
 		houseprice = HousePrice()
-
 		# get data from s3
 		houseprice.load_dataset()
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Overview</p>', unsafe_allow_html=True)
-		st.write("This phase involves taking a deep dive into the data available and understanding it in further detail before starting the process of analysis. This involves collecting the data, describing the various attributes, performing some exploratory analysis of data. This phase is important because bad data or insufficient knowledege about available data can have cascading adverse effects in the later stages of the analysis")
 
 		# Data collection
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Data</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Data</p>', unsafe_allow_html=True)
 		st.write("This project used the house pricing dataset available on Kaggle at: https://www.kaggle.com/harlfoxem/housesalesprediction. This is historical pricing data for house sales in King County, USA and King County is essentially where Seattle is. The target variable in this dataset is the price of a particular house, information used to predict price of a particular house includes house area, number of bedrooms, number of bathrooms, and other utilities")	
 		# Data snapshot
 		st.write("Data snapshot of the first 10 rows")
 		st.write(houseprice.data.head(10))
 		st.write('The dataset has 21613 rows, 21 columns')
 
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Data Description</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Data Description</p>', unsafe_allow_html=True)
 		houseprice.describe_data()	
 	
 		# Select valid data
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 4. Select valid data</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Select valid data</p>', unsafe_allow_html=True)
 		st.write("**Select features of interest**: Column id contains unique values, it is removed from the final dataset for analysis")
 		st.write("**Select valid rows**: Only select rows having price > 0")
 		cleaned_ds = houseprice.clean_data(houseprice.data)
@@ -75,7 +74,7 @@ def app():
 		st.write("Attributes include numerical, categorical and temporal data type")
 		
 		# Descriptive Statistics
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 5. Descriptive statistics</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 4. Descriptive statistics</p>', unsafe_allow_html=True)
 		pd.options.display.float_format = '{:.3f}'.format
 		st.write(cleaned_ds.describe(include='all').T)
 		st.write("1. **count**: There is no missing values in this dataset")
@@ -84,7 +83,7 @@ def app():
 		st.write("4. **count, mean, std, min, max**: The count, mean, min, and max rows are self-explanatory. The std row shows the standard deviation (which measures how dispersed the values are). Mean of price is 540088, median is 450000 but max price is > 7700000, this variable is heavily right skewed")
 		st.write("5. **quartile**: The 25%, 50% and 75% rows show the corresponding percentiles: a percentile indidates the value below which a given percentage of observations in a group of observations falls.")
 
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 6. Examine missing values</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 5. Examine missing values</p>', unsafe_allow_html=True)
 		missing_data_df = regu.show_missing_data(cleaned_ds)
 		st.write(missing_data_df)
 		st.write("There is no missing data in all columns")
@@ -96,15 +95,13 @@ def app():
 
 		# initialize HousePrice object for performing tasks
 		houseprice = HousePrice()
-
-		# overview
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Overview</p>', unsafe_allow_html=True)
-		st.write('Exploratory data analysis, also known as EDA, is a crucial step in the lifecycle. Here, the main objective is to explore and understand the data in detail. The common tools for this are descriptive statistics, charts and visualizations to look at various data attributes, find associations and correlations and make a note of data quality problems if any')
 		houseprice.load_dataset()
+		
+		# clean data
 		cleaned_ds = houseprice.clean_data(houseprice.data)
 
 		# split data
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Split data into train and test set</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Split data into train and test set</p>', unsafe_allow_html=True)
 		st.write("It is best practice to set aside part of the data at this stage (before performing Exploratory Data Analysis). This is because our brain is an amazing pattern detection system, which means that it is highly prone to overfitting: if you look at the test set, you may stumple upon some seemingly interesting pattern in the test data that leads you to select a particular kind of Machine Learning model. When you estimate the generalization error using the test set, your estimate will be too optimistic and you will launch a system that will not perform as well as expected. This is called data snooping bias")
 		df_train  = houseprice.clean_data(houseprice.df_train) 
 		df_test  = houseprice.clean_data(houseprice.df_test) 
@@ -113,7 +110,7 @@ def app():
 		target = houseprice.TARGET
 
 		# categorize var types
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Categorize vars by data type</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Categorize vars by data type</p>', unsafe_allow_html=True)
 		st.write('As depending on types of data, different charts and transformation are employed to analyze, it is useful to categorize vars by data type and have a closer look at different types of vars')
 		st.write("**1. Target var**: 'price'")
 		st.write("**2. Discrete vars**: 'bedrooms', 'bathrooms', 'floors', 'waterfront', 'view', 'condition', 'grade'")
@@ -122,13 +119,13 @@ def app():
 		st.write("**5.  DateTime vars**: 'date'")
 
 		# examine target variable
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 4. Examine Target variable</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Examine Target variable</p>', unsafe_allow_html=True)
 		regu.plot_continuous_var(df_train[target], houseprice.TARGET)
 		st.write('Notice here, it looks like most of our houses are falling somewhere between zeo and maybe around 1.5 million dollars. We could have these extreme outliers here for the really expensive houses. It may actually make sense to drop those outliers in our analysis if they are just a few points that are very extreme. And so we can essentially build a model that realistically predicts the price of a house if its intended value between 0 and 2 million dollars')
 		st.write('For optimal results, we would be looking for a normal distribution of price, however has an exponential one. Obviously there are outliers in the price available. This will surely be a problem for liner regression model.')
 
 		# examin discrete vars
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 5. Examine Discrete vars</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 4. Examine Discrete vars</p>', unsafe_allow_html=True)
 		for var in houseprice.DISCRETE_VARS:
 			st.write(var)
 			regu.plot_discrete_var(df_train[var], df_train[target], var, df_train[target])
@@ -137,7 +134,7 @@ def app():
 		st.write("For the remaining features including bathrooms, floors, waterfront, view, condtion, grade, it's quite obvious that the higher values corresponding to the higher prices. So these features may be useful in predicting house prices")
 
 		# examine continuous vars
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 6. Examine Continous vars</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 5. Examine Continous vars</p>', unsafe_allow_html=True)
 		for var in houseprice.CONTINUOUS_VARS:
 			st.write(var)
 			regu.analyze_continuous_var(df_train[var], df_train[target])
@@ -162,7 +159,7 @@ def app():
 		st.write("yr_renovated: 0 means it had not been renovated. In feature engineering step, to better capture the pattern of this feature (consistent value), the value 0 should be changed to the year of building the house. Eg., house A was built in 2000 and was not renovated => yr_renovated of house A is 2000, while house B was built in 2000 but was renovated in 2005, house C was built in 2000 and renovated in 2010.")
 
 		# explore geographical vars
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 7. Explore Geographical vars: long, lat</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 6. Explore Geographical vars: long, lat</p>', unsafe_allow_html=True)
 		long_var = houseprice.GEOGRAPHICAL_VARS[0]
 		lat_var = houseprice.GEOGRAPHICAL_VARS[1]
 		regu.plot_geographical_var(df_train[lat_var],df_train[long_var],df_train[target],
@@ -172,7 +169,7 @@ def app():
 		st.write("The figure on the right hand side has removed outliers, hence it's give a better look at areas with high prices. ""It looks like house in the center area is higher than in other areas")
 
 		# examine categorical vars
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 8. Explore categorical vars: zipcode</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 7. Explore categorical vars: zipcode</p>', unsafe_allow_html=True)
 		st.write("Zipcode reprsent a specific area or residential zone and is categorical data. If we have domain knowledge, we know which areas house is more expensive than other areas. To extract this information, we can apply data transfomration from categorical data to numeric data by using mean house price of each zipcode as a value corresponding to each zipcode and rank it in increasing order")
 		ordered_labels = df_train.groupby(['zipcode'])['price'].mean().sort_values().index
 		ordinal_label = {k:i for i, k in enumerate(ordered_labels.values, 0)} 
@@ -187,21 +184,21 @@ def app():
 		st.write("From the plot, it seems that prices towards the right side is more expensive")
 
 		# examine temporal vars
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 9. Explore temporal vars: date</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 8. Explore temporal vars: date</p>', unsafe_allow_html=True)
 		df_train[houseprice.TEMPORAL_VARS] = pd.to_datetime(df_train[houseprice.TEMPORAL_VARS])
 		df_train['month'] = df_train['date'].apply(lambda date:date.month)
 		regu.plot_temporal_var(df_train.groupby('month').mean()[target])
 		st.write('It can be seen that sale house in spring and summer (months from 3 to 6) is a bit higher than other seasons, and overall, house prices in 2015 is a bit increase compared to in 2014')
 
 		# investigate multi-collinearity
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 10. Multivariate Analysis: relationships between vars</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 9. Multivariate Analysis: relationships between vars</p>', unsafe_allow_html=True)
 		# regu.plot_correlation_matrix(df_train[houseprice.NUMERICAL_VARS + [target]])
 		regu.plot_correlation(df_train, target)
 		st.write('It looks like sqft_living has very high correlation with the actual price of the house.')
 		st.write('Features have high correlations with many other features: sqft_living, bathrooms, grade, sqft_above => The dataset has multicollinearity problem, this problem should be resolved to reduce violation in linear regression model')
 
 		# summary
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 11. Summary</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 10. Summary</p>', unsafe_allow_html=True)
 		st.write('After understanding data from Exploratory Data Analysis, the following tasks will be applied in preprocessing step to represent the patterns of data and train predictive models:')
 		st.write('1. Remove vars: id')
 		st.write('2. Numeric vars: Handling outliers in heavily skewed features, Transform price in linear regression model, replace yr_renovated = 0 with yr_built, scaling data')
@@ -225,6 +222,8 @@ def app():
 		st.write('4.**Temporal vars**:')
 		st.write('+ Create new feature season from attribute date, encode season by creating dummy vars')
 		st.write('5.**Scaling num vars**')
+
+		st.write('In general, the model is trained and tested in the following way: The data is split into two parts. The first part is training set, it will be used for training model to learn data and inference parameters by minimizing error between model output and observed output, this is called "training error". The second part is used fro testing the "generalization" ability of the model, i.e., its ability to give the correct answer to a new case, this is called "generation error" or "test error"')
 
 		# initialize HousePrice object for performing tasks
 		houseprice = HousePrice()

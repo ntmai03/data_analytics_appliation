@@ -34,8 +34,12 @@ def app():
 		st.markdown('<p style="color:lightgreen; font-size: 25px;"> Business Understanding</p>', unsafe_allow_html=True)
 		st.write("LendingClub is a US peer-to-peer lending company, headquartered in San Francisco, California. It was the first peer-to-peer lender to register its offerings as securities with the Securities and Exchange Commission (SEC), and to offer loan trading on a secondary market. LendingClub is the world's largest peer-to-peer lending platform")
 		st.write("Given historical data on loans with information on whether or not the borrower defaulted (charge-off), can we build a model that can predict whether or not a borrower will pay back their loan? This way in the future when we get a new potential customer we can access whether or not they are likely to pay back the loan.")
+		
 		st.markdown('<p style="color:lightgreen; font-size: 25px;"> Defining Problem</p>', unsafe_allow_html=True)
 		st.write("It is a classificaion problem, the project is to employ Machine Learning algorithms to build the predictive model that allows to predict default rate or credit risk probability of a given credit profile")
+		
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> Notebook</p>', unsafe_allow_html=True)
+		st.write("More details and explanations at https://github.com/ntmai03/DataAnalysisProject/tree/main/02-Classification")
 
 
 	#============================================= Data Understanding ========================================
@@ -43,36 +47,35 @@ def app():
 		# get data from s3
 		credit_risk = CreditRisk()
 
-		st.markdown('<p style="color:Green; font-size: 25px;"> 1. Data Collection</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Data Collection</p>', unsafe_allow_html=True)
 		st.write("There are many LendingClub data sets on Kaggle. This project uses a subset of the Lending Club datatset obtained from Kaggle: https://www.kaggle.com/wordsforthewise/lending-club")
 		
-		# Raw data
+		# Raw Data snapshot
 		credit_risk.load_dataset()
-		st.markdown('<p style="color:Green; font-size: 25px;"> 2. Data snapshot of the first 10 rows</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Data snapshot of the first 10 rows</p>', unsafe_allow_html=True)
 		st.write(credit_risk.data.head(10))
 		st.write('The dataset has 466285 rows, 75 columns')
-		st.write("There are fields that are not necessary for building predictive models such as Unnamed, id, member_id, url, desc. These fields should be excluded from the final dataset")
-		st.write("There are many fields describing the payment process during a loan period such as open_il_6m, open_il_12m, open_il_24m, mths_since_rcnt_il, total_bal_il, il_util, open_rv_12m, open_rv_24m. As the objective is to build a model to predict a borrower is default or not to support making decision on loan approval. Hence, these fields are not available at at the time of loan application and should be excluded from the train features")
-	
+		st.write("Field 'loan_status' can be used as the target of the model as it indicates which loan is default or not or in-progress of payment")
+		st.write("Many fields that are not necessary for building predictive models such as Unnamed, id, member_id, url, desc. These fields should be excluded from the final dataset")
+		st.write("It's crucial to specify which loan application are default at the initial state of loan application to help making decision about loan approval. Therefore this analysis only focus on the initial state of a loan, by selecting only features that are relevant to the initial state of a loan for training the predictive model. The features that may be generated later that reflect loan payment progress are excluded from the model in order to avoiding leaky feature problem")
+
 		# Select valid data
-		st.markdown('<p style="color:Green; font-size: 25px;"> 3. Select valid data</p>', unsafe_allow_html=True)
-		st.write("**Select features of interest**: It's important to specify which loan application are default at the initial state of loan application to help making decision about loan approvement. This analysis focus on the initial state of loan application, therefore only selecting features that describe the initial loan application, the remaining features were not sure that data were generated at the loan application or reflecting loan payment progress from data description. In order to avoiding leaky feagtures, they were not selected for building the model and therefore are excluded")
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Select valid data</p>', unsafe_allow_html=True)
+		st.write("Here is the list of features selected for building the model as they represent info at the initial loan application:")
+		credit_risk.describe_data()	
 		st.write("**Select valid rows**: The following describes distinct values of loan status ard their counts")
 		st.write(credit_risk.data.loan_status.value_counts())
 		st.write("Only select loan_status with values ['Fully Paid', 'Charged Off', 'Default'], the remaining status indicates that the borrowers are paying the loan and not the final status, hence these rows are excluded from the final dataset.Rename 'loan_status' to 'Class' and Convert data in 'Class' var with 1 if the value was 'Fully Paid', 0 if value was ['Charged Off','Default']")
-
-		st.markdown('<p style="color:Green; font-size: 25px;"> 4. Data Description</p>', unsafe_allow_html=True)
-		credit_risk.describe_data()	
 		
-		st.markdown('<p style="color:Green; font-size: 25px;"> 5. Data Cleansing</p>', unsafe_allow_html=True)
-		st.write('The following steps applied to in cleansing step: 1. convert data type to appropriate type, 2. select vars of interest, 3. select valid rows, 4. Rename columns from loan_status to Class, 5. Convert data in column Class: 1 if the value was Fully Paid or Charged Off, 0 if value was Fully Paid')
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 4. Data Cleansing</p>', unsafe_allow_html=True)
+		st.write('The following steps applied in cleansing step: 1. convert data type to appropriate type, 2. select vars of interest, 3. select valid rows, 4. Rename columns from loan_status to Class, 5. Convert data in column Class: 1 if the value was Fully Paid or Charged Off, 0 if value was Fully Paid')
 		cleaned_ds = credit_risk.clean_data(credit_risk.data)
 		st.write(cleaned_ds.head(10))
 		st.write(cleaned_ds.shape)
 		st.write("After filtering and cleansing data, the dataset only consists of 228046 rows and 28 columns")
 		st.write("Attributes include numerical, categorical and temporal data type")
 
-		st.markdown('<p style="color:Green; font-size: 25px;"> 6. Descriptice statistics</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 5. Descriptice statistics</p>', unsafe_allow_html=True)
 		pd.options.display.float_format = '{:.3f}'.format
 		st.write(cleaned_ds.describe(include='all').T)
 		st.write("There are 228,046 instances in the dataset, the dataset is quite medium size. Notice that there are several fields having number of non-null values less than 228,046, meaning that these fields having missing data. We need to take care of this later")
@@ -83,23 +86,21 @@ def app():
 		st.write("4. **count, mean, std, min, max**: The count, mean, min, and max rows are self-explanatory. The std row shows the standard deviation (which measures how dispersed the values are). Mean of price is 540088, median is 450000 but max price is > 7700000, this variable is heavily right skewed")
 		st.write("5. **quartile**: The 25%, 50% and 75% rows show the corresponding percentiles: a percentile indidates the value below which a given percentage of observations in a group of observations falls.")
 
-
-
-	#=========================================== Exploratory Data Analysis =======================================
-	if task_option == 'Exploratory Data Analysis':
-		st.write('Exploratory data analysis, also known as EDA, is a crucial step in the lifecycle. Here, the main objective is to explore and understand the data in detail. The common tools for this are descriptive statistics, charts and visualizations to look at various data attributes, find associations and correlations and make a note of data quality problems if any')
-		
-		credit_risk = CreditRisk()
-		credit_risk.load_dataset()
-		cleaned_ds = credit_risk.clean_data(credit_risk.data)
-
-
-		st.markdown('<p style="color:Green; font-size: 25px;"> 1. Examine missing values</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 6. Examine missing values</p>', unsafe_allow_html=True)
 		missing_data_df = clfu.show_missing_data(cleaned_ds)
 		st.write(missing_data_df)
 
 
-		st.markdown('<p style="color:Green; font-size: 25px;"> 2. Split data into train and test set</p>', unsafe_allow_html=True)
+	#=========================================== Exploratory Data Analysis =======================================
+	if task_option == 'Exploratory Data Analysis':
+
+		# initialize credit risk object
+		credit_risk = CreditRisk()
+		credit_risk.load_dataset()
+		cleaned_ds = credit_risk.clean_data(credit_risk.data)
+
+		# split data
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Split data into train and test set</p>', unsafe_allow_html=True)
 		credit_risk.train_test_split()
 		df_train = credit_risk.clean_data(credit_risk.df_train)
 		df_test = credit_risk.clean_data(credit_risk.df_test)
@@ -111,11 +112,22 @@ def app():
 		st.write(df_train.head())
 		target = credit_risk.TARGET
 
-		st.markdown('<p style="color:Green; font-size: 25px;"> 3. Examine Target variable</p>', unsafe_allow_html=True)
+		# categorize var types
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Categorize vars by data type</p>', unsafe_allow_html=True)
+		st.write('As depending on types of data, different charts and transformation are employed to analyze, it is useful to categorize vars by data type and have a closer look at different types of vars')
+		st.write("**1. Target var**: 'Class'")
+		st.write("**2. Discrete vars**: 'pub_rec', 'delinq_2yrs', 'inq_last_6mths'")
+		st.write("**3. Continuous vars**: 'loan_amnt', 'int_rate', 'installment', 'annual_inc', 'dti', 'open_acc', 'revol_bal', 'revol_util', 'total_acc'")
+		st.write("**4. Categorical vars**: term', 'grade', 'sub_grade', 'emp_title', 'emp_length', 'home_ownership', 'verification_status', 'purpose', 'title', 'zip_code', 'addr_state', 'initial_list_status', 'application_type'")
+		st.write("**5.  DateTime vars**: 'issue_d', 'earliest_cr_line'")
+
+		# investigate target var
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Examine Target variable</p>', unsafe_allow_html=True)
 		clfu.plot_target_distribution(df_train)
 		st.write("This is an unbalanced or imbalanced problem. Notice that there are a lot more entries of people that fully paid off their loans than people that did not pay back. This is really common for classificaion problems that have to do with fraud or spam. That means we can expect to probably do very well in terms of accuracy but our precision and recall are going to be the true metrics that we'll have to evaluate our model. We should expect to perform that well on those metrics due to the fact that we have a very imbalanced dataset here.")
 
-		st.markdown('<p style="color:Green; font-size: 25px;"> 4. Examine Discrete vars</p>', unsafe_allow_html=True)
+		# investigate discrete var
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 4. Examine Discrete vars</p>', unsafe_allow_html=True)
 		st.write('**inq_last_6mths**')
 		# check unique values
 		df_train['inq_last_6mths'].value_counts()
@@ -127,16 +139,17 @@ def app():
 		buf = BytesIO()
 		fig.savefig(buf, format="png")
 		st.image(buf)
-		st.write("The plot presents the ratio of default class vs. pay off class for the comparison. There is slight increase in the default ratio as inq_last_6mths increases, except that the ratio is much smaller for value o 8. This can be explain due to small sample size (only 17 cases compared to 87763 cased of values 0). This indicate this feature can be helpful to inform the status of target var in the predictive model. To give a better pattern of this feature, considering combining values of 7 and 8 into 1 value")    
+		st.write("The plot presents the ratio of default class vs. pay off class for each unique value. There is slight increase in the default ratio as inq_last_6mths increases, except that the ratio is much smaller for value of 8. This can be explain due to small sample size (only 17 cases compared to 87763 cased of values 0). This indicate this feature can be helpful to inform the status of target var in the predictive model. To give a better pattern of this feature, considering combining values of 7 and 8 into 1 value")    
 
-
-		st.markdown('<p style="color:Green; font-size: 25px;"> 5. Examine Continous vars</p>', unsafe_allow_html=True)
+		# investigate continous var
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 5. Examine Continous vars</p>', unsafe_allow_html=True)
 		st.write("**Examine distribution**")
 		clfu.plot_continuous_distribution(df_train, credit_risk.RAW_CONTINUOUS_VARS)
-		st.write("It can be seen from the plot that int_rate and dti have the distributions of 2 classes are a bit different, with mean of class 1 is a bit higher than mean of class 0. This indicates these 2 features may be an important features to predict default observation")
-		st.write(" Some variables such as 'annual_inc', 'delinq_2yrs', 'revol_bal', 'revol_util' are heavily skewed which makes it hard to inspect the distribution between two classes, removing these observations having outliers to have to better inspectation")
+		st.write("It can be seen from the plot that **int_rate** and **dti** have the distributions of 2 classes are a bit different, with mean of class 1 is a bit higher than mean of class 0. This indicates these 2 features may be an important features to predict default observation")
+		st.write(" Some variables such as **'annual_inc', 'delinq_2yrs', 'revol_bal', 'revol_util'** are heavily skewed which makes it hard to inspect the distribution between two classes, removing these observations having outliers to have to better inspectation")
 
-		st.markdown('<p style="color:Green; font-size: 25px;"> 6. Examine Categorical vars</p>', unsafe_allow_html=True)
+		# investigate categorical var
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 6. Examine Categorical vars</p>', unsafe_allow_html=True)
 		st.write("**Count unique values of each categorical var**")
 		cat_feature_df = pd.DataFrame(columns=['Feature','count_distinct_value'])
 		for e in credit_risk.RAW_CATEGORICAL_VARS:
@@ -144,7 +157,7 @@ def app():
 		    cat_feature_df = cat_feature_df.append({'Feature':e,'count_distinct_value':count_distinct},ignore_index=True)
 		st.write(cat_feature_df.sort_values('count_distinct_value',ascending = False))
 
-		st.write("**sub_grade*: Examine the default and pay-off ratio between 2 classes")
+		st.write("**sub_grade**: Examine the default and pay-off ratio between 2 classes")
 		fig, ax = plt.subplots(1,1,figsize=(10,6))
 		subgrade_order = sorted(df_train['sub_grade'].unique())
 		sns.countplot(x='sub_grade', data=df_train, order=subgrade_order,palette='coolwarm',hue='Class')
@@ -153,7 +166,19 @@ def app():
 		st.image(buf)
 		st.write('It can be seen from the plot that the higher subgrade the more default rate. Subgrade may be a good feature for predicitve model')
 
-		st.markdown('<p style="color:Green; font-size: 25px;"> 7. Examine Temporal vars</p>', unsafe_allow_html=True)
+		st.write("it can be seen clearer to plot ratios between default and full pay for each unique value")
+		subgrade_df = df_train[df_train['Class']==1].groupby("sub_grade").count()["Class"]
+		subgrade_fp = df_train[df_train['Class']==0].groupby("sub_grade").count()["Class"]
+		subgrade_ratio = subgrade_df/subgrade_fp
+		fig, ax = plt.subplots(1,1,figsize=(10,6))
+		subgrade_order = sorted(df_train['sub_grade'].unique())
+		subgrade_ratio.plot(kind='bar')		
+		buf = BytesIO()
+		fig.savefig(buf, format="png")
+		st.image(buf)
+
+		# investigate temporal var
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 7. Examine Temporal vars</p>', unsafe_allow_html=True)
 		st.write('**issue_d_date**')
 		df_train['issue_d_date'] = pd.to_datetime(df_train['issue_d'], format = '%b-%y')
 		fig, ax = plt.subplots(1,1,figsize=(10,6))
@@ -165,11 +190,12 @@ def app():
 		st.write("A grades are the lower risk borrowers, borrowers that most likely will be able to repay their loans, as they are typically in a better financial situation. Borrowers within this grade are charged lower interest rates.")
 		st.write("E, F and G grades represent the riskier borrowers. Usually borrowers in somewhat tighter financial situations, or for whom there is not sufficient financial history to make a reliable credit assessment. They are typically charged higher rates, as the business, and therefore the investors, take a higher risk when lending them money.")
 
-		st.markdown('<p style="color:Green; font-size: 25px;"> 8. Correlation Matrix</p>', unsafe_allow_html=True)
+		# multivariate analysis
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 8. Correlation Matrix</p>', unsafe_allow_html=True)
 		corr_matt = df_train[credit_risk.NUMERICAL_VARS + ['Class']].corr()
 		mask = np.array(corr_matt)
 		mask[np.tril_indices_from(mask)] = False
-		fig, ax = plt.subplots(1,1,figsize=(9,9))
+		fig, ax = plt.subplots(1,1,figsize=(10,10))
 		sns.heatmap(corr_matt, mask=mask, vmax=.8, square=True, annot=True,  cmap='viridis')
 		buf = BytesIO()
 		fig.savefig(buf, format="png")
@@ -177,22 +203,54 @@ def app():
 		st.write("We can see various relationships between the features and obviously you would get a perfect correlation along the diagonal. You should have noticed almost perfect relationship between loan_amnt and installment")
 		st.write("It's pretty much makes sense that the installments and the actual loan amount would be extremely correlated because they're essentially correlated bby some sort of internal formula that this company uses. if you loan someone out one million dollars you would expect that following some formula your payments your monthly payment instalments are going to be quite high and you'll probably use that same formula even if you loan someone a thousand dollars and then those payments will be likely much less.")
 
-		st.markdown('<p style="color:Green; font-size: 25px;"> 9. the correlation of the numeric features to the new loan_repaid </p>', unsafe_allow_html=True)
-		fig, ax = plt.subplots(1,1,figsize=(10,6))
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 9. the correlation of the numeric features to the new loan_repaid </p>', unsafe_allow_html=True)
+		fig, ax = plt.subplots(1,1,figsize=(12,6))
 		df_train.corr()['Class'].sort_values().drop('Class').plot(kind='bar')
 		buf = BytesIO()
 		fig.savefig(buf, format="png")
 		st.image(buf)
 		st.write("Interest rate has essentially the highest negative correlation with whether or not someones's goting to repay their loan which kind of makes sense. Maybe if you have an extremely high interest rate you're going to find it harder to pay of that loan.")
 
+		# summary
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 10. Summary</p>', unsafe_allow_html=True)
+		st.write('After understanding data from Exploratory Data Analysis, the following tasks will be applied in preprocessing step to represent the patterns of data and train predictive models:')
+		st.write('1. **Remove vars**: grade, title, installment')
+		st.write('2. **Numeric vars**: ')
+		st.write("+ inq_last_6mths: combine value 7 & 8 into 7")
+		st.write("+ pub_rec_bin: 0 if the  pub_rec <= 3, 1 otherwise")
+		st.write("+ delinq_2yrs_bin: 0 if the  pub_rec <= 3, 1 otherwise")
+		st.write('3. **Categorical vars**: ')
+		st.write("+ Convert ordinal data to numeric data: term, emp_length")
+		st.write("+ Encode cat vars - calculate class ratio: ['sub_grade', 'purpose', 'zip_code']")
+		st.write("+ Encode cat vars - create dummy vars")
+		st.write("4. **Temporal vars**: ")
+		st.write("+ Convert obj var to date time var: issue_d, earliest_cr_line")
+		st.write("+ Create new vars: num_of_year, num_of_day")
+		st.write('5. **Handling missing data**')
+		st.write('6. **Scaling num var,  handling outliers**')
 
 	#=========================================== Data Processing =======================================
 	if task_option == 'Data Processing':
 		credit_risk = CreditRisk()
 		credit_risk.load_dataset()
 
-		st.markdown('<p style="color:Green; font-size: 25px;"> 1. Split data to train set and test set</p>', unsafe_allow_html=True)
-		st.write('In general, the model is trained and tested in the following way: The data is split into two parts. The first part is training set, it will be used for training model to learn data and inference parameters by minimizing error between model output and observed output, this is called "training error". The second part is used fro testing the "generalization" ability of the model, i.e., its ability to give the correct answer to a new case, this is called "generation error" or "test error"')
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Summary</p>', unsafe_allow_html=True)
+		st.write('After understanding data from Exploratory Data Analysis, the following tasks will be applied in preprocessing step to represent the patterns of data and train predictive models:')
+		st.write('1. **Remove vars**: grade, title, installment')
+		st.write('2. **Numeric vars**: ')
+		st.write("+ inq_last_6mths: combine value 7 & 8 into 7")
+		st.write("+ pub_rec_bin: 0 if the  pub_rec <= 3, 1 otherwise")
+		st.write("+ delinq_2yrs_bin: 0 if the  pub_rec <= 3, 1 otherwise")
+		st.write('3. **Categorical vars**: ')
+		st.write("+ Convert ordinal data to numeric data: term, emp_length")
+		st.write("+ Encode cat vars - calculate class ratio: ['sub_grade', 'purpose', 'zip_code']")
+		st.write("+ Encode cat vars - create dummy vars")
+		st.write("4. **Temporal vars**: ")
+		st.write("+ Convert obj var to date time var: issue_d, earliest_cr_line")
+		st.write("+ Create new vars: num_of_year, num_of_day")
+		st.write('5. **Handling missing data**')
+		st.write('6. **Scaling num var,  handling outliers**')
+
 		credit_risk.train_test_split()
 		st.write("Train set dimension:")
 		st.write(credit_risk.df_train.shape)
@@ -200,18 +258,21 @@ def app():
 		st.write(credit_risk.df_test.shape)
 		st.write("The whole dataset is split with 80% for training and 20% for testing. This left 182.436 samples for train set and 45.610 for test set.")
 
-		st.markdown('<p style="color:Green; font-size: 25px;"> 2. Display raw data</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Display raw data</p>', unsafe_allow_html=True)
 		st.write(credit_risk.df_train.head())
-		st.markdown('<p style="color:Green; font-size: 25px;"> 3. Processed and final data for training model</p>', unsafe_allow_html=True)
 
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Processing data for training model</p>', unsafe_allow_html=True)
 		processed_train_df = credit_risk.data_processing_pipeline2(credit_risk.df_train, 1)
+		st.write('Processed train data')
 		st.write(processed_train_df.head())
 		# store corpus to csv file
 		#dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, file_name=cf.S3_DATA_PROCESSED_PATH + 'loan_data_pipeline2_train.csv', data=processed_train_df, type='s3')
-
 		processed_test_df = credit_risk.data_processing_pipeline2(credit_risk.df_test, 0)
-		dm.write_csv_file(bucket_name=cf.S3_DATA_PATH,  file_name=cf.S3_DATA_PROCESSED_PATH + 'loan_data_pipeline2_test.csv', data=processed_test_df, type='s3')
-		st.write('done')
+		st.write('Processed test data')
+		#dm.write_csv_file(bucket_name=cf.S3_DATA_PATH,  file_name=cf.S3_DATA_PROCESSED_PATH + 'loan_data_pipeline2_test.csv', data=processed_test_df, type='s3')
+		st.write(processed_test_df.head())
+
+
 
 	#========================================== Predictive Model =======================================
 	if task_option == 'Train Model':
@@ -220,14 +281,10 @@ def app():
 		model_name = ['Select model',
 					  'Logistic Regression',
 					  'Decision Tree',
-					  'KNN',
 					  'Naive Bayes',
-					  'LDA',
-					  'QDA',					
 					  'Random Forest',
 					  'Gradient Boosting Tree',
-					  'Xgboost',
-					  'DNN']
+					  'Xgboost']
 		model_option = st.sidebar.selectbox('', model_name)
 
 		if model_option == 'Logistic Regression':
@@ -235,11 +292,6 @@ def app():
 			if st.sidebar.button("Select threshold and Train"):
 				credit_risk = CreditRisk()
 				credit_risk.logistic_regression_analysis(threshold)
-
-
-		if model_option == 'Lasso Regression':
-			credit_risk = CreditRisk()
-			credit_risk.lasso_analysis()
 		
 		if model_option == 'Decision Tree':
 			st.sidebar.markdown('max_depth')
@@ -289,25 +341,11 @@ def app():
 				credit_risk = CreditRisk()
 				credit_risk.gradient_boosting_analysis(max_depth, max_features, min_samples_leaf)
 
-		if model_option == 'KNN':
-			st.sidebar.markdown('n_neighbors')
-			n_neighbors = st.sidebar.slider("",10, 20, 10, key="N_NEIGHBORS")
-			st.sidebar.header('')
-			if st.sidebar.button("Train"):
-				credit_risk = CreditRisk()
-				credit_risk.knn_analysis(n_neighbors)
-
 		if model_option == 'Naive Bayes':
 			credit_risk = CreditRisk()
 			credit_risk.GaussianNB_analysis()
 
-		if model_option == 'LDA':
-			credit_risk = CreditRisk()
-			credit_risk.lda_analysis()
 
-		if model_option == 'QDA':
-			credit_risk = CreditRisk()
-			credit_risk.qda_analysis()
 
 
 
@@ -383,15 +421,11 @@ def app():
 			credit_risk = CreditRisk()
 			# data type conversion
 			for key in credit_risk.DATA_TYPE:
-				st.write(key)
 				new_obj[key] = new_obj[key].astype(credit_risk.DATA_TYPE[key])
-			st.write(new_obj)
 
 			processed_new_obj = credit_risk.data_processing_pipeline2(new_obj, 0)
-			st.write(processed_new_obj[credit_risk.TRAIN_VARS])
 			model_file = os.path.join(cf.TRAINED_MODEL_PATH,"credit_risk_logistic_regression.pkl")
 			model = joblib.load(model_file)
-
 
 			default_prob = model.predict_proba(processed_new_obj[credit_risk.BEST_FEATURES])
 			st.write("**Default Probability**: ", default_prob)

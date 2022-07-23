@@ -111,27 +111,27 @@ def app():
         if((location_option != 'Select city...')):
             st.markdown('<p style="color:Green; font-size: 30px;"> Input your search condition</p>', unsafe_allow_html=True)
             # cleaness
-            condition1 = st.text_input("Condition 1", 'clean , spacious and really easy to find')
+            condition1 = st.text_input("Condition 1", 'soho, oxford')
             # food and eating
-            condition2 = st.text_input("Condition 2", "eggs , bacon , toast , cereal , coffee & tea in our apartment fridge")
+            condition2 = st.text_input("Condition 2", 'room clean , comfortable bed')
             # staff and services
-            condition3 = st.text_input("Condition 3", "staff very friendly and helpful")
+            condition3 = st.text_input("Condition 3", 'indian food restaurant')
             # location
-            condition4 = st.text_input("Condition 4", "close to underground cannon st station , bank station")
+            condition4 = st.text_input("Condition 4", 'staff, friendly, helpful')
             # neighborhood
-            condition5 = st.text_input("Condition 5", "location in central london is close to at least 3 tube stations , restaurants , grocery stores")
-            # bathroom
-            condition6 = st.text_input("Condition 6", "large bathroom with large sheet towels and white company toiletries, body wash & lotion , shampoo & conditioner")
-
+            condition5 = st.text_input("Condition 5", 'tv , fan , hairdryer , fridge , microwave, kettle, coffee, tea bags')
+ 
             if st.sidebar.button("Recommend"):
                 hotel = HotelRecommendation()
-                hotel.hotel_recommendation_booking(source_dict[location_option],
+                result_df = hotel.hotel_recommendation_booking(source_dict[location_option],
                                                    condition1,
                                                    condition2,
                                                    condition3,
                                                    condition4,
-                                                   condition5,
-                                                   condition6)
+                                                   condition5)
+                st.write(result_df.head(3))
+
+
 
 
     if task_option == 'Knowledge Graph':
