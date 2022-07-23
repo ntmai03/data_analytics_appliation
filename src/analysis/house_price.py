@@ -558,18 +558,18 @@ class HousePrice:
         test_score = model.score(self.processed_X_test, self.y_test)
 
         # Performance metric
-        st.markdown('#### Performance metrics')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Performance metrics</p>', unsafe_allow_html=True)
+
         st.write('Train set')
         reu.get_metrics(train_score, self.y_train, pred_train)
         st.write('Test set')
         reu.get_metrics(test_score, self.y_test, pred_test)
 
         # Trees
-        st.markdown('#### Visualize the tree')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Visualize the tree</p>', unsafe_allow_html=True)
         graph = Source(sklearn.tree.export_graphviz(
                 model,
-                out_file="kchouse_tree.dot",
-                #out_file=None,
+                out_file=None,
                 feature_names=self.TRAIN_VARS,
                 class_names='price',
                 special_characters=False,
@@ -579,13 +579,12 @@ class HousePrice:
             ))
 
         png_data = graph.pipe(format='png')
-        with open('report/picture/dtree_structure.png', 'wb') as f:
+        with open('house_price_tree.png', 'wb') as f:
             f.write(png_data)
         st.image(png_data)
 
-
         # important features
-        st.markdown('#### Feature Importance')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3.  Feature Importance</p>', unsafe_allow_html=True)
         reu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
 
         # examine residual plot

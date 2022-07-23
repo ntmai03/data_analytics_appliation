@@ -16,6 +16,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.cluster import KMeans
+from scipy import stats
 
 ## for data
 import collections
@@ -367,6 +368,14 @@ class NewsCategory:
             joblib.dump(kmeans, 'news_category_kmeans.pkl')
         self.kmeans = kmeans
         return kmeans_cluster
+
+
+    def mapping_cluster_class(self, y, cluster):
+        mapping = {}
+        for class_id in np.unique(y):
+            mode, _ = stats.mode(cluster[y==class_id])
+            mapping[mode[0]] = class_id
+        return mapping
 
 
     def transform_tsne(self, data, save_flag=0):

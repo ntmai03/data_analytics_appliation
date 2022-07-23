@@ -34,6 +34,8 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 import pandas as pd
 
+import scipy
+
 import spacy
 #spacy.download('en_core_web_sm')
 import en_core_web_sm
@@ -55,10 +57,10 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.stem import SnowballStemmer
 from nltk.tokenize.toktok import ToktokTokenizer
 from nltk.tokenize import RegexpTokenizer
-nltk.download('stopwords')
-nltk.download('punkt')
-nltk.download('wordnet')
-nltk.download('omw-1.4')
+#nltk.download('stopwords')
+#nltk.download('punkt')
+#nltk.download('wordnet')
+#nltk.download('omw-1.4')
 
 import wordcloud
 
@@ -254,6 +256,7 @@ class HotelRecommendation:
         #pretrained_model.train(tokenized_corpus, total_examples=pretrained_model.corpus_count, epochs = 5)       
         # store pretrained word embedding
         joblib.dump(pretrained_model, city + '_booking_pretrained_model.pkl')
+
 
         # train model
         embeddings =  self.vectorize(corpus_df['text_clean'], pretrained_model)
@@ -483,20 +486,20 @@ class HotelRecommendation:
         return embeddings 
 
 
-    def calculate_similarity(self, item, pretrained_model, embeddings, cluster_df, encoder_layer):
+    def calculate_similarity(self, search_condition, model, cluster_df):
 
-        vectorized_item = [item]
-        vectorized_item = self.vectorize(vectorized_item, pretrained_model)
-        embedded_value = pd.DataFrame(vectorized_item, columns = range(0,300))
-        scaler = joblib.load(hotel_rec_scaler)
-        embedded_value = scaler.transform(embedded_value)
-        embedded_value = encoder_layer.predict(embedded_value)
-        cosine_sim = cosine_similarity(embeddings,embedded_value)
-        cluster_df['Cosine'] = cosine_sim
-        cluster_df = cluster_df.sort_values(['Cosine'], ascending=False)
-        cluster_df = cluster_df.reset_index(drop=True)        
+        dic_bow = model.fit_transform(cluster_df['text'])
+        bow_df = dic_bow.todense()
+        bow_search_string = model.transform(search_condition)
+        bow_search_string = bow_search_string.todense()
+        bow_search_string = bow_search_string * 2
+        bow_search_string = bow_search_string - 1
+        similarity_list = []
+        for i in range(0, len(cluster_df)):
+            similarity = 1  -  scipy.spatial.distance.cdist(np.array(bow_df[i]), np.array(bow_search_string), 'hamming')
+            similarity_list.append(similarity.sum())       
 
-        return cluster_df
+        return similarity_list
 
 
     def max_similarity(self, similarity_df, topic):
@@ -508,190 +511,200 @@ class HotelRecommendation:
         return sim_df
 
 
+    def search_corpus(self, city, search_string):
+        #  load corpus
+        corpus_file="/".join([cf.S3_DATA_BOOKING, city, 'corpus_df.csv'])
+        corpus_df = dm.read_csv_file(bucket_name=cf.S3_DATA_PATH,  file_name=corpus_file, type='s3')
+        corpus_df['text'] = corpus_df['text'].astype(str)
+        corpus_df['text'] = corpus_df['text'].apply(lambda x: str(x).lower())
+
+        search_corpus = []
+        cluster_df = pd.DataFrame()
+
+        search_string = search_string.lower()
+        search_string = re.sub(r'[^\w\s]', '', str(search_string).lower().strip())
+        search_corpus = nltk.tokenize.word_tokenize(search_string)  
+        st.write(search_corpus) 
+        for e in search_corpus:
+            voc_df = corpus_df[corpus_df['text'].str.contains(e)]
+            st.write(voc_df.shape)
+            cluster_df = cluster_df.append(voc_df)
+            cluster_df = cluster_df.drop_duplicates()
+
+        return search_corpus,  cluster_df
+
+
+
+
+
     def hotel_recommendation_booking(self, city, 
-                                    cluster0='', 
-                                    cluster1='', 
-                                    cluster2='', 
-                                    cluster3='', 
-                                    cluster4='', 
-                                    cluster5=''):
+                                    search_string1='', 
+                                    search_string2='', 
+                                    search_string3='', 
+                                    search_string4='', 
+                                    search_string5=''):
         # text processing and normalizing input data
-        cluster0 = utils_preprocess_text(cluster0, flg_stemm=True, flg_lemm=True, lst_stopwords=lst_stopwords)
-        cluster1 = utils_preprocess_text(cluster1, flg_stemm=True, flg_lemm=True, lst_stopwords=lst_stopwords)
-        cluster2 = utils_preprocess_text(cluster2, flg_stemm=True, flg_lemm=True, lst_stopwords=lst_stopwords)
-        cluster3 = utils_preprocess_text(cluster3, flg_stemm=True, flg_lemm=True, lst_stopwords=lst_stopwords)
-        cluster4 = utils_preprocess_text(cluster4, flg_stemm=True, flg_lemm=True, lst_stopwords=lst_stopwords)
-        cluster5 = utils_preprocess_text(cluster5, flg_stemm=True, flg_lemm=True, lst_stopwords=lst_stopwords)
+        search_string1, cluster_df1 = self.search_corpus(city, search_string1)
+        search_string2, cluster_df2 = self.search_corpus(city, search_string2)
+        search_string3, cluster_df3 = self.search_corpus(city, search_string3)
+        search_string4, cluster_df4 = self.search_corpus(city, search_string4)
+        search_string5, cluster_df5 = self.search_corpus(city, search_string5)
+
+        st.write(len(cluster_df1), len(cluster_df2), len(cluster_df3), len(cluster_df4), len(cluster_df5))
 
         #  load corpus
-        train_vars = range(0,15)
-        train_vars = [str(var) for var in train_vars]
-        corpus_file="/".join([cf.S3_DATA_BOOKING, city, 'clause_df.csv'])
+        corpus_file="/".join([cf.S3_DATA_BOOKING, city, 'corpus_df.csv'])
         corpus_df = dm.read_csv_file(bucket_name=cf.S3_DATA_PATH,  file_name=corpus_file, type='s3')
+        corpus_df['text'] = corpus_df['text'].astype(str)
+        corpus_df['text'] = corpus_df['text'].apply(lambda x: str(x).lower())
 
-        # load pretrain model
-        pretrained_model = joblib.load(city + '_booking_pretrained_model.pkl')
-        
-        # load auto encoder embedding data
-        embedding_file = "/".join([cf.S3_DATA_BOOKING, city, 'booking_ae_embedding_df.csv'])
-        ae_embeddings = dm.read_csv_file(bucket_name=cf.S3_DATA_PATH,  file_name=embedding_file, type='s3')
+        vectorizer = CountVectorizer(max_features=10000, ngram_range=(1,1), lowercase=False, binary='true')
 
-        # load encoder embedding model  
-        autoencoder = keras.models.load_model(cf.TRAINED_MODEL_PATH + '/' + city + "_booking_autoencoder_model.h5")
-        encoder_layer = Model(autoencoder.input, autoencoder.layers[-4].output)
 
         # calculate similarity of each condition
         st.markdown('<p style="color:Green; font-size: 30px;"> Best match for each condition: </p>', unsafe_allow_html=True)
-        df0 = self.calculate_similarity(cluster0, pretrained_model, ae_embeddings[train_vars], corpus_df, encoder_layer)
-        st.write("Best match condion 1: listing_id ", df0.listing_id.iloc[0], ' - ', df0.text.iloc[0], " - cosine = ", df0.Cosine.iloc[0])
-        df1 = self.calculate_similarity(cluster1, pretrained_model, ae_embeddings[train_vars], corpus_df, encoder_layer)
-        st.write("Best match condion 2: listing_id ", df1.listing_id.iloc[0], ' - ', df1.text.iloc[0], " - cosine = ", df1.Cosine.iloc[0])
-        df2 = self.calculate_similarity(cluster2, pretrained_model, ae_embeddings[train_vars], corpus_df, encoder_layer)
-        st.write("Best match condion 3: listing_id ", df2.listing_id.iloc[0], ' - ', df2.text.iloc[0], " - cosine = ", df2.Cosine.iloc[0])
-        df3 = self.calculate_similarity(cluster3, pretrained_model, ae_embeddings[train_vars], corpus_df, encoder_layer)
-        st.write("Best match condion 4: listing_id ", df3.listing_id.iloc[0], ' - ', df3.text.iloc[0], " - cosine = ", df3.Cosine.iloc[0])
-        df4 = self.calculate_similarity(cluster4, pretrained_model, ae_embeddings[train_vars], corpus_df, encoder_layer)
-        st.write("Best match condion 5: listing_id ", df4.listing_id.iloc[0], ' - ', df4.text.iloc[0], " - cosine = ", df4.Cosine.iloc[0])
-        df5 = self.calculate_similarity(cluster5, pretrained_model, ae_embeddings[train_vars], corpus_df, encoder_layer)
-        st.write("Best match condion 6: listing_id ", df5.listing_id.iloc[0], ' - ', df5.text.iloc[0], " - cosine = ", df5.Cosine.iloc[0])
+        cluster_df1['score1'] = self.calculate_similarity(search_string1, vectorizer, cluster_df1)
+        cluster_df1 = cluster_df1.sort_values(['score1'], ascending=False).reset_index(drop=True)
+        sim_df1 = cluster_df1.groupby(['listing_id']).score1.max()
+        sim_df1 = pd.DataFrame(sim_df1).reset_index(drop=False)
+        for j in range(0, 3):
+            st.write('condition 1')
+            st.write(j, cluster_df1.text[j], cluster_df1.score1[j])
+
+        cluster_df2['score2'] = self.calculate_similarity(search_string2, vectorizer, cluster_df2)
+        cluster_df2 = cluster_df2.sort_values(['score2'], ascending=False).reset_index(drop=True)
+        sim_df2 = cluster_df2.groupby(['listing_id']).score2.max()
+        sim_df2 = pd.DataFrame(sim_df2).reset_index(drop=False)
+        for j in range(0, 3):
+            st.write('condition 2')
+            st.write(j, cluster_df2.text[j], cluster_df2.score2[j])
+
+        cluster_df3['score3'] = self.calculate_similarity(search_string3, vectorizer, cluster_df3)
+        cluster_df3 = cluster_df3.sort_values(['score3'], ascending=False).reset_index(drop=True)
+        sim_df3 = cluster_df3.groupby(['listing_id']).score3.max()
+        sim_df3 = pd.DataFrame(sim_df3).reset_index(drop=False)
+        for j in range(0, 3):
+            st.write('condition 3')
+            st.write(j, cluster_df3.text[j], cluster_df3.score3[j])
 
 
-        sim0_df = self.max_similarity(df0, 0)
-        sim1_df = self.max_similarity(df1, 1)
-        sim2_df = self.max_similarity(df2, 2)
-        sim3_df = self.max_similarity(df3, 3)
-        sim4_df = self.max_similarity(df4, 4)
-        sim5_df = self.max_similarity(df5, 5)
+        cluster_df4['score4'] = self.calculate_similarity(search_string4, vectorizer, cluster_df4)
+        cluster_df4 = cluster_df4.sort_values(['score4'], ascending=False).reset_index(drop=True)
+        sim_df4 = cluster_df4.groupby(['listing_id']).score4.max()
+        sim_df4 = pd.DataFrame(sim_df4).reset_index(drop=False) 
+        for j in range(0, 3): 
+            st.write('condition 4')
+            st.write(j, cluster_df4.text[j], cluster_df4.score4[j]) 
 
-        sum_sim_df = pd.DataFrame(corpus_df['listing_id'].unique(), columns =['listing_id'])
-        sum_sim_df = sum_sim_df.merge(sim0_df, how='left', left_on='listing_id', right_on='listing_id')
-        sum_sim_df = sum_sim_df.merge(sim1_df, how='left', left_on='listing_id', right_on='listing_id')
-        sum_sim_df = sum_sim_df.merge(sim2_df, how='left', left_on='listing_id', right_on='listing_id')
-        sum_sim_df = sum_sim_df.merge(sim3_df, how='left', left_on='listing_id', right_on='listing_id')
-        sum_sim_df = sum_sim_df.merge(sim4_df, how='left', left_on='listing_id', right_on='listing_id')
-        sum_sim_df = sum_sim_df.merge(sim5_df, how='left', left_on='listing_id', right_on='listing_id')
+        cluster_df5['score5'] = self.calculate_similarity(search_string5, vectorizer, cluster_df5)
+        cluster_df5 = cluster_df5.sort_values(['score5'], ascending=False).reset_index(drop=True)
+        sim_df5 = cluster_df5.groupby(['listing_id']).score5.max()
+        sim_df5 = pd.DataFrame(sim_df5).reset_index(drop=False)
+        for j in range(0, 3): 
+            st.write('condition 5')
+            st.write(j, cluster_df5.text[j], cluster_df5.score5[j])
 
 
-        sum_sim_df.fillna(0, inplace=True)
-        sum_sim_df['avg_sim'] = sum_sim_df[['score0', 'score1', 'score2', 'score3', 'score4','score5']].mean(axis=1)
-        sum_sim_df = sum_sim_df.sort_values(['avg_sim'], ascending=False)
-        st.markdown('<p style="color:Green; font-size: 30px;"> Top 10 matched hotels: </p>', unsafe_allow_html=True)
-        st.write(sum_sim_df.head(10))
+        result_df = pd.DataFrame(corpus_df['listing_id'].unique(), columns =['listing_id'])
+        result_df = result_df.merge(sim_df1[['listing_id', 'score1']],how='left', on='listing_id')
+        result_df = result_df.merge(sim_df2[['listing_id', 'score2']],how='left', on='listing_id')
+        result_df = result_df.merge(sim_df3[['listing_id', 'score3']],how='left', on='listing_id')
+        result_df = result_df.merge(sim_df4[['listing_id', 'score4']],how='left', on='listing_id')
+        result_df = result_df.merge(sim_df5[['listing_id', 'score5']],how='left', on='listing_id')
+        result_df = result_df.fillna(0)
+        result_df['score3'] = result_df['score3'] * 8
+        result_df['avg_score'] = result_df[['score1','score2','score3','score4','score5']].mean(axis=1)
+        result_df = result_df.sort_values('avg_score', ascending=False)
 
-        st.markdown('<p style="color:Green; font-size: 30px;"> Review best matched hotel: </p>', unsafe_allow_html=True)
-        max_sim_id = sum_sim_df.head(1)['listing_id'].iloc[0]
-        st.write('Listing_id: ',max_sim_id)
-        st.write(df0[df0.listing_id == max_sim_id].text.iloc[0])
-        st.write(df1[df1.listing_id == max_sim_id].text.iloc[0])
-        st.write(df2[df2.listing_id == max_sim_id].text.iloc[0])
-        st.write(df3[df3.listing_id == max_sim_id].text.iloc[0])
-        st.write(df4[df4.listing_id == max_sim_id].text.iloc[0])
-        st.write(df5[df5.listing_id == max_sim_id].text.iloc[0])
+        st.write('The hotel best match: ')
+        listing_id = result_df.listing_id.iloc[0]
+        st.write(cluster_df1.loc[cluster_df1.listing_id == listing_id].text.iloc[0])
+        st.write(cluster_df2.loc[cluster_df2.listing_id == listing_id].text.iloc[0])
+        st.write(cluster_df3.loc[cluster_df3.listing_id == listing_id].text.iloc[0])
+        st.write(cluster_df4.loc[cluster_df4.listing_id == listing_id].text.iloc[0])
+        st.write(cluster_df5.loc[cluster_df5.listing_id == listing_id].text.iloc[0])
+
+
+        return result_df
 
 
 
     ##############################################################################################
     # Knowledge Graph
     ##############################################################################################
-    def extract_pattern1(self, doc):
-        
-        adj = ""
-        obj1 = []
-        obj2 = []
-        for i, tok in enumerate(doc):
-            #print(i, ": ", tok.text, "-->",tok.dep_,"-->", tok.pos_)
-            
-            # structure adj + Noun: capture adj or gerund or Participant as adj ()
-            # if((tok.dep_.endswith("acomp") == False) & (tok.pos_.endswith("ADJ") == True)):
-            if(tok.pos_.endswith("ADJ") == True):
-                adj = tok.text
-            elif((tok.dep_.endswith("amod") == True) & (tok.pos_.endswith("VERB") == True)):
-                adj = tok.text
-                
-                
-            if((tok.pos_.endswith("NOUN")==True) | (tok.pos_.endswith("PROPN") == True)| (tok.pos_.endswith("PRON") ==True)):
-                if(tok.dep_.endswith("compound") == False):
-                    entity = tok.text
-                    if(len(adj) > 0):
-                        obj1.append(entity)
-                        obj2.append(adj)
-                    adj = ""
-        
-        return obj1, obj2
 
 
-    def extract_pattern2(self, doc):
+    def extract_pattern(self, doc):
         
-        entity = ""
-        obj1 = []
-        obj2 = []
+        obj_list = []
+        adj_list = []
+
+        
         flag = 0
         for i, tok in enumerate(doc):
-            # print(i, ": ", tok.text, "-->",tok.dep_,"-->", tok.pos_)
-                
-            # extract subject/ root
-            if((tok.pos_.endswith("NOUN")==True) | (tok.pos_.endswith("PROPN") == True)| (tok.pos_.endswith("PRON") ==True)):
-                if((tok.dep_.endswith("ROOT") == True) | (tok.dep_.endswith("appos") == True) | (tok.dep_.find("subj") == True)):
-                    entity = tok.text
-                else:
-                    entity = ""
-                    
-            if((tok.pos_.endswith("AUX")==True)):
-                flag = 1
-                    
-            # structure adj + Noun: capture adj or gerund or Participant as adj ()
-            # if((tok.dep_.endswith("acomp") == False) & (tok.pos_.endswith("ADJ") == True)):
-            if(tok.pos_.endswith("ADJ") == True):
-                adj = tok.text
-                if((len(entity) > 0) & (flag==1)):
-                    obj1.append(entity)
-                    obj2.append(adj)
-                entity = ""
-                
-        
-        return obj1, obj2
-
-    def extract_pattern3(self, doc):
-        
-        entity1 = ''
-        entity2 = ''
-        obj1 = []
-        obj2 = []
-        flag = 0
-        for i, tok in enumerate(doc):
-            # print(i, ": ", tok.text, "-->",tok.dep_,"-->", tok.pos_)
-                
-            # extract subject/ root
-            if((tok.pos_.endswith("NOUN")==True) | (tok.pos_.endswith("PROPN") == True)| (tok.pos_.endswith("PRON") ==True)):
-                if((tok.dep_.endswith("ROOT") == True) | (tok.dep_.endswith("appos") == True) | (tok.dep_.find("subj") == True)):
-                    entity1 = tok.text
-                else:
-                    entity2 = tok.text
             
-            if((len(entity1) > 0) & (len(entity2) > 0)):
-                #print(entity1, entity2)
-                obj1.append(entity1)
-                obj2.append(entity2)
-                entity2= ''
-        
-        return obj1, obj2
+            
+            # nearby words on the left
+            if((tok.pos_.endswith("NOUN")==True) | (tok.pos_.endswith("PROPN") == True)):
+                obj_list.append(tok.text)
+            else:
+                obj_list.append('N/A')
+                
+            if(tok.pos_.endswith("ADJ")==True):
+                adj_list.append(tok.text)
+            else:
+                adj_list.append('N/A')
+                
+        return obj_list, adj_list
+
 
 
     def extract_info(self, clause):
-        house_obj1 = []
-        house_obj2 = []
-        obj1, obj2 = self.extract_pattern1(clause)
-        house_obj1 = house_obj1 + obj1
-        house_obj2 = house_obj2 + obj2
-        obj1, obj2 = self.extract_pattern2(clause)
-        house_obj1 = house_obj1 + obj1
-        house_obj2 = house_obj2 + obj2
-        obj1, obj2 = self.extract_pattern3(clause)
-        house_obj1 = house_obj1 + obj1
-        house_obj2 = house_obj2 + obj2
+        list_obj1 = []
+        list_obj2 = []
 
-    
-        return house_obj1, house_obj2
+        for e in range(0, len(cluster_df)):
+            doc = nlp(cluster_df.text.iloc[e])
+            obj_list, adj_list = self.extract_pattern(doc)
+            
+            for i in range(0, len(obj_list)):
+                if (obj_list[i] != 'N/A'):
+                    #print(i, obj_list[i])
+                    # words on the left
+                    #print('left')
+                    for j in range(i-5, i-1):
+                        if((j < i) & (j > i - 5) & (j > 0 )):
+                            if (obj_list[j] != 'N/A'):
+                                #print(i, j)
+                                #print(obj_list[i], obj_list[j])
+                                list_obj1.append(obj_list[i])
+                                list_obj2.append(obj_list[j])
+                    # words on the right    
+                    #print('right')
+                    for j in range(i+1, i+5):
+                        if((j > i) & (j < i + 5) & (j < len(obj_list))):
+                            if (obj_list[j] != 'N/A'):
+                                #print(i, j)
+                                #print(obj_list[i], obj_list[j])
+                                list_obj1.append(obj_list[i])
+                                list_obj2.append(obj_list[j])
+            
+                    for j in range(i-3, i):
+                        if((j < i) & (j > i - 3) & (j >= 0 )):
+                            if (adj_list[j] != 'N/A'):
+                                #print(i, j)
+                                #print(obj_list[i], adj_list[j])
+                                list_obj1.append(obj_list[i])
+                                list_obj2.append(adj_list[j])
+                    # words on the right    
+                    #print('right')
+                    for j in range(i+1, i+3):
+                        if((j > i) & (j < i + 3) & (j < len(obj_list))):
+                            if (adj_list[j] != 'N/A'):
+                                #print(i, j)
+                                #print(obj_list[i], adj_list[j])
+                                list_obj1.append(obj_list[i])
+                                list_obj2.append(adj_list[j])
 
 
     

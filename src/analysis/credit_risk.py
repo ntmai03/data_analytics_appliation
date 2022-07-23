@@ -206,7 +206,41 @@ class CreditRisk:
         
 
     def describe_data(self):
-        st.markdown('+ **loan_amnt**: The listed amount of the loan applied for by the borrower. If at some point in time, the credit department reduces the loan amount, then it will be reflected in this value')
+        name = ['loan_amnt', 'term', 'int_rate', 'installment', 'grade', 'sub_grade', 'emp_length', 
+                'home_ownership', 'annual_inc', 'issue_d', 'loan_status', 'purpose', 'title','zip_code', 
+                'addr_state', 'dti', 'earliest_cr_line', 'open_acc', 'pub_rec', 'revol_bal', 'revol_util',
+                'total_acc', 'initial_list_status', 'application_type', 'delinq_2yrs', 'inq_last_6mths']
+        description = [ 'The listed amount of the loan applied for by the borrower. If at some point in time, the credit department reduces the loan amount, then it will be reflected in this value',
+                        'The number of payments on the loan. Values are in months and can be either 36 or 60',
+                        'Interest Rate on the loan',
+                        'The monthly payment owed by the borrower if the loan originates',
+                        'LC assigned loan grade',
+                        'LC assigned loan subgrade',
+                        'Employment length in years. Possible values are between 0 and 10 where 0 means less than one year and 10 means ten or more years',
+                        'The home ownership status provided by the borrower during registration or obtained from the credit report. Our values are: RENT, OWN, MORTGAGE, OTHER',
+                        'Indicates if income was verified by LC, not verified, or if the income source was verified',
+                        'The month which the loan was funded',
+                        'Current status of the loan',
+                        'A category provided by the borrower for the loan request',
+                        'The loan title provided by the borrower',
+                        'The first 3 numbers of the zip code provided by the borrower in the loan application',
+                        'The state provided by the borrower in the loan application',
+                        'A ratio calculated using the borrower’s total monthly debt payments on the total debt obligations, excluding mortgage and the requested LC loan, divided by the borrower’s self-reported monthly income',
+                        "The month the borrower's earliest reported credit line was opened",
+                        "The number of open credit lines in the borrower's credit file",
+                        'Number of derogatory public records',
+                        'Total credit revolving balance',
+                        'Revolving line utilization rate, or the amount of credit the borrower is using relative to all available revolving credit',
+                        "The total number of credit lines currently in the borrower's credit file",
+                        "The initial listing status of the loan. Possible values are – W, F",
+                        "Indicates whether the loan is an individual application or a joint application with two co-borrowers",
+                        "Deliquency rate in the last 2 years",
+                        "Number of inquiries in the last 6 months"
+            ]
+        data_describe = pd.DataFrame()
+        data_describe['Name'] = name
+        data_describe['Description'] = description
+        st.write(data_describe)
 
 
     def train_test_split(self):
@@ -464,10 +498,7 @@ class CreditRisk:
         # get data from s3
         df_train = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'loan_data_pipeline2_train.csv')
         df_test = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + 'loan_data_pipeline2_test.csv')
-        self.TRAIN_VARS = df_train.drop([self.TARGET],axis=1).columns
-
-        st.write(df_train.head())
-        
+        self.TRAIN_VARS = df_train.drop([self.TARGET],axis=1).columns       
         self.processed_X_train = df_train[self.TRAIN_VARS]
         self.y_train = df_train[self.TARGET]
         self.processed_X_test = df_test[self.TRAIN_VARS]
@@ -498,7 +529,6 @@ class CreditRisk:
         self.prepare_dataset()
         self.processed_X_train = self.processed_X_train[self.BEST_FEATURES]
         self.processed_X_test = self.processed_X_test[self.BEST_FEATURES]
-        st.write(self.processed_X_train.head())
 
         # Train model
         model = LogisticRegression(C=1e9, solver='lbfgs')
@@ -507,15 +537,14 @@ class CreditRisk:
         joblib.dump(model, cf.TRAINED_MODEL_PATH + '/credit_risk_logistic_regression.pkl')
 
         # Result Summary Table
-        st.markdown('#### Result Summary Table')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1.  Result Summary Table</p>', unsafe_allow_html=True)
         summary_table = pd.DataFrame(columns=['FeatureName'], data=self.BEST_FEATURES)
         summary_table['Coefficient'] = np.transpose(model.coef_)
         summary_table.index = summary_table.index + 1
         summary_table = summary_table.sort_index()
-        summary_table['OddsRatio'] = np.exp(np.abs(summary_table.Coefficient))
+        summary_table['OddsRatio'] = np.exp(summary_table.Coefficient)
         summary_table = summary_table.sort_values('OddsRatio', ascending=False)
         st.write(summary_table)
-        st.write('--------------------------------------------------')
 
         # Prediction
         self.pred_train, self.prob_train  = self.prediction(self.processed_X_train)
@@ -525,10 +554,10 @@ class CreditRisk:
         self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0)   
 
         # Performance Evaluation
-        st.markdown("#### Performance Evaluation")
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2.  Performance Evaluation</p>', unsafe_allow_html=True)
 
         # Confusion matrix
-        st.write('Confusion Matrix')
+        st.write('**Confusion Matrix**')
         fig, ax = plt.subplots(1,2,figsize=(8,4))
         sns.heatmap(clfu.create_confusion_matrix(self.y_train, self.pred_train), annot=True, fmt='d', ax=ax[0])
         sns.heatmap(clfu.create_confusion_matrix(self.y_test, self.pred_test), annot=True, fmt='d', ax=ax[1])
@@ -537,18 +566,21 @@ class CreditRisk:
         st.image(buf)
 
         # Classification report
+        st.write("**Classification report**")
         st.write('Train data')
         st.write(classification_report(self.y_train, self.pred_train))
         st.write('Test data')
         st.write(classification_report(self.y_test, self.pred_test))
 
         # ROC Curve and ROC-AUC
+        st.write("**ROC Curve and ROC-AUC**")
         clfu.plot_roc_auc(self.y_train, self.prob_train, self.y_test, self.prob_test)
 
         # select threshold
-        st.markdown("#### Select threshold")
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Select threshold</p>', unsafe_allow_html=True)
+
         # Recall and Decision Boundary T
-        st.write('Recall and Decision Boundary T')
+        st.write('**Recall and Decision Boundary T**')
         train_precision_0, train_precision_1, train_recall_0, train_recall_1 = clfu.precision_recall_threshold(self.prob_train, self.y_train)
         test_precision_0, test_precision_1, test_recall_0, test_recall_1 = clfu.precision_recall_threshold(self.prob_test, self.y_test)
         fig, ax = plt.subplots(1,2,figsize=(12,4.5))
@@ -559,7 +591,7 @@ class CreditRisk:
         st.image(buf)
 
         # Precision-Recall curve
-        st.write('Precision-Recall curve')
+        st.write('**Precision-Recall curve**')
         fig, ax = plt.subplots(1,2,figsize=(12,4.5))
         clfu.plot_precision_recall_curve(ax[0], self.y_train, self.prob_train[:,1])
         clfu.plot_precision_recall_curve(ax[1], self.y_test, self.prob_test[:,1])
@@ -567,7 +599,7 @@ class CreditRisk:
         fig.savefig(buf, format="png")
         st.image(buf)
 
-        st.write('Prediction')
+        # st.write('Prediction')
         # prediction with threshold
         self.pred_train = np.where(self.prob_train[:,1] > 0.2, 1, 0)       
         self.pred_test = np.where(self.prob_test[:,1] > 0.2, 1, 0)   
@@ -575,7 +607,15 @@ class CreditRisk:
         prediction_df['True_Outcome'] = self.y_train
         prediction_df['Prediction'] = self.pred_train
         prediction_df['Probability'] = self.prob_train[:,1]
-        st.write(prediction_df.head(20))
+
+        # Classification report
+        st.write("**Classification report**")
+        st.write('Train data')
+        st.write(classification_report(self.y_train, self.pred_train))
+        st.write('Test data')
+        st.write(classification_report(self.y_test, self.pred_test))
+
+        # st.write(prediction_df.head(20))
 
     
     def features_importance(self):
@@ -595,7 +635,7 @@ class CreditRisk:
         st.write(backward_selection_features)
 
 
-    def random_forest_analysis(self, max_depth=8, max_features=10, min_samples_leaf=50, n_estimators=300):
+    def random_forest_analysis(self, max_depth=8, max_features=10, min_samples_leaf=50, n_estimators=100):
 
         # get train set and test set
         self.prepare_dataset()
@@ -608,12 +648,8 @@ class CreditRisk:
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # Model parameters
-        st.markdown('#### Hyper-parameters of model')
-        st.write(model.get_params())
-
         # important features
-        st.markdown('#### Feature Importance')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Feature Importance</p>', unsafe_allow_html=True)
         clfu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
 
         # Prediction
@@ -624,6 +660,7 @@ class CreditRisk:
         self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
 
         # Performance Evaluation
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2.  Performance Evaluation</p>', unsafe_allow_html=True)
         self.evaluate_performance()
 
 
@@ -638,12 +675,8 @@ class CreditRisk:
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # Model parameters
-        st.markdown('#### Hyper-parameters of model')
-        st.write(model.get_params())
-
         # Trees
-        st.markdown('#### Visualize the tree')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1.  Visualize the tree</p>', unsafe_allow_html=True)
         graph = Source(sklearn.tree.export_graphviz(
                 model,
                 out_file=None,
@@ -661,7 +694,7 @@ class CreditRisk:
         st.image(png_data)
 
         # important features
-        st.markdown('#### Feature Importance')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2.  Feature Importance</p>', unsafe_allow_html=True)
         clfu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
 
         # Prediction
@@ -672,6 +705,7 @@ class CreditRisk:
         self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
 
         # Performance Evaluation
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3.  Performance Evaluation</p>', unsafe_allow_html=True)
         self.evaluate_performance()
 
 
@@ -688,12 +722,8 @@ class CreditRisk:
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # Model parameters
-        st.markdown('#### Hyper-parameters of model')
-        st.write(model.get_params())
-
         # important features
-        st.markdown('#### Feature Importance')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Feature Importance</p>', unsafe_allow_html=True)
         clfu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
 
         # Prediction
@@ -704,40 +734,9 @@ class CreditRisk:
         self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
 
         # Performance Evaluation
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2.  Performance Evaluation</p>', unsafe_allow_html=True)
         self.evaluate_performance()
 
-
-    def knn_analysis(self, n_neighbors=5):
-
-        # get train set and test set
-        self.prepare_dataset()
-
-        model = KNeighborsClassifier(n_neighbors=n_neighbors, metric='minkowski', p=2)
-        model.fit(self.processed_X_train, self.y_train)
-        self.model = model
-
-        # Model parameters
-        st.markdown('#### Hyper-parameters of model')
-        st.write(model.get_params())
-
-        # Performance Evaluation
-        self.evaluate_performance()
-
-        # select k values
-        error_rate = []
-        for i in range(10, 20):
-            knn_model = KNeighborsClassifier(n_neighbors=i)
-            knn_model.fit(self.processed_X_train, self.y_train)
-            pred_i = knn_model.predict(self.processed_X_test)
-            error_rate.append(np.mean(pred_i != self.y_test))
-
-        # plotting
-        st.markdown('#### Select number of neighbors')
-        fig, ax = plt.subplots(1,1,figsize=(8,5))
-        ax.plot(range(1,50, error_rate, color='blue', linestyle='dashed', marker='o', markerfacecolor='red', markersize=10))
-        plt.title('Error rate vs. K-value')
-        plt.xlabel('K')
-        plt.ylabel('Error Rate')
 
 
     def gradient_boosting_analysis(self, max_depth=8, max_features=10, min_samples_leaf=50, n_estimators=300):
@@ -753,12 +752,8 @@ class CreditRisk:
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # Model parameters
-        st.markdown('#### Hyper-parameters of model')
-        st.write(model.get_params())
-
         # important features
-        st.markdown('#### Feature Importance')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Feature Importance</p>', unsafe_allow_html=True)
         clfu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
 
         # Prediction
@@ -769,6 +764,7 @@ class CreditRisk:
         self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
 
         # Performance Evaluation
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2.  Performance Evaluation</p>', unsafe_allow_html=True)
         self.evaluate_performance()
 
 
@@ -783,10 +779,6 @@ class CreditRisk:
         model.fit(self.processed_X_train, self.y_train)
         self.model = model
 
-        # Model parameters
-        st.markdown('#### Hyper-parameters of model')
-        st.write(model.get_params())
-
         # Prediction
         self.pred_train, self.prob_train  = self.prediction(self.processed_X_train)
         self.pred_test, self.prob_test  = self.prediction(self.processed_X_test)
@@ -795,59 +787,9 @@ class CreditRisk:
         self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
 
         # Performance Evaluation
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> Performance Evaluation</p>', unsafe_allow_html=True)
         self.evaluate_performance()
 
-
-    def lda_analysis(self):
-
-        # get train set and test set
-        self.prepare_dataset()
-        self.processed_X_train = self.processed_X_train[self.TRAIN_NUM_VARS]
-        self.processed_X_test = self.processed_X_test[self.TRAIN_NUM_VARS]
-
-        model = LinearDiscriminantAnalysis()
-        model.fit(self.processed_X_train, self.y_train)
-        self.model = model
-
-        # Model parameters
-        st.markdown('#### Hyper-parameters of model')
-        st.write(model.get_params())
-
-        # Prediction
-        self.pred_train, self.prob_train  = self.prediction(self.processed_X_train)
-        self.pred_test, self.prob_test  = self.prediction(self.processed_X_test)
-        # prediction with threshold
-        self.pred_train = np.where(self.prob_train[:,1] > threshold, 1, 0)       
-        self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
-
-        # Performance Evaluation
-        self.evaluate_performance()
-
-
-    def qda_analysis(self):
-
-        # get train set and test set
-        self.prepare_dataset()
-        self.processed_X_train = self.processed_X_train[self.TRAIN_NUM_VARS]
-        self.processed_X_test = self.processed_X_test[self.TRAIN_NUM_VARS]
-
-        model = QuadraticDiscriminantAnalysis()
-        model.fit(self.processed_X_train, self.y_train)
-        self.model = model
-
-        # Model parameters
-        st.markdown('#### Hyper-parameters of model')
-        st.write(model.get_params())
-
-        # Prediction
-        self.pred_train, self.prob_train  = self.prediction(self.processed_X_train)
-        self.pred_test, self.prob_test  = self.prediction(self.processed_X_test)
-        # prediction with threshold
-        self.pred_train = np.where(self.prob_train[:,1] > threshold, 1, 0)       
-        self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
-
-        # Performance Evaluation
-        self.evaluate_performance()
 
 
     ##############################################################################################
@@ -898,12 +840,12 @@ class CreditRisk:
     def evaluate_performance(self):
 
         # model prediction
-        st.markdown('#### Performance Evaluation for Train data')
+        st.markdown('<p style="color:green; font-size: 18px;"> Performance Evaluation for Train data ', unsafe_allow_html=True)
         clfu.display_model_performance_metrics(true_labels=self.y_train, 
                                                predicted_labels=self.pred_train, 
                                                predicted_prob = self.prob_train[:,1])
         st.write('-'*30)
-        st.markdown('#### Performance Evaluation for Test data')
+        st.markdown('<p style="color:green; font-size: 18px;"> Performance Evaluation for Test data ', unsafe_allow_html=True)
         clfu.display_model_performance_metrics(true_labels=self.y_test, 
                                                predicted_labels=self.pred_test, 
                                                predicted_prob = self.prob_test[:,1])
