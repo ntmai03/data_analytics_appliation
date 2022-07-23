@@ -188,7 +188,7 @@ def feature_importance(feature_importance, TRAIN_VARS):
     feature_importance.index = TRAIN_VARS
     feature_importance.sort_values(inplace=True,ascending=True)
 
-    fig, axes = plt.subplots(1,1,figsize=(7,8))
+    fig, axes = plt.subplots(1,1,figsize=(10,5))
     feature_importance.plot.bar()
     plt.ylabel('Weight')
     plt.title('Feature Importance')
