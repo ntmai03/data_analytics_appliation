@@ -57,10 +57,10 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from nltk.stem import SnowballStemmer
 from nltk.tokenize.toktok import ToktokTokenizer
 from nltk.tokenize import RegexpTokenizer
-#nltk.download('stopwords')
-#nltk.download('punkt')
-#nltk.download('wordnet')
-#nltk.download('omw-1.4')
+nltk.download('stopwords')
+nltk.download('punkt')
+nltk.download('wordnet')
+nltk.download('omw-1.4')
 
 import wordcloud
 
