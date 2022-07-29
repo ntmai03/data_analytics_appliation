@@ -8,7 +8,7 @@ import numpy as np
 from analysis.coin_trading import Coin_Trading
 import config as cf
 import util.timeseries_util as tsu
-
+import util.data_manager as dm
 
 def app():
 
@@ -19,7 +19,8 @@ def app():
 				 'Data Collection',
 				 'Data Exploration',
 				 'Trading Strategy',
-				 'Trading Demo']
+				 'Trading Demo',
+				 'Monitoring Trading']
 	task_option = st.sidebar.selectbox('', task_type)
 	st.sidebar.header('')
 
@@ -127,7 +128,7 @@ def app():
 			increase_flag = st.sidebar.number_input('increase_flag',0, 1, 1)
 			rsi_limit1 = 1
 			rsi_limit2 = 1
-			cutloss_th=0.3
+			cutloss_th=1
 
 			if(st.sidebar.button('Back Testing')):
 				ct = Coin_Trading(symbol=selected_symbol)
@@ -159,24 +160,37 @@ def app():
 		if (selected_symbol != 'Select symbol'):
 			TODAY = datetime.date.today() 
 			start_time = TODAY - datetime.timedelta(cf.data['default_start_trading'])
+			rsi_period = st.sidebar.number_input('rsi_period',1, 20, 6)
+			sma_period = st.sidebar.number_input('sma_period',1, 20, 6)
+			lower_threshold = st.sidebar.number_input('lower_threshold',1, 100, 10)
+			upper_threshold = st.sidebar.number_input('upper_threshold',1, 100, 90)
+			cutloss_flag = st.sidebar.number_input('cutloss_flag',0, 1, 1)
+			increase_flag = st.sidebar.number_input('increase_flag',0, 1, 1)
+
 			bar_length = "15m"
 			units = 1
 			position = 0
-			rsi_period = 6
-			sma_period = 6
-			lower_threshold = 10
-			upper_threshold = 80
 			rsi_limit1 = 1
 			rsi_limit2 = 1
-			cutloss_th=0.3
+			cutloss_th=1
+
+			if(st.sidebar.button('Start Trading')):
+				ct = Coin_Trading(symbol=selected_symbol)
+				#ct.rsi_trading(start_time, rsi_period, sma_period, lower_th, upper_th, bar_length, units, position)
+				ct.rsi_trading(start_time, bar_length, rsi_period, sma_period, lower_threshold, upper_threshold, 
+					rsi_limit1=rsi_limit1,rsi_limit2=rsi_limit2,position = position, cutloss_flag=1, cutloss_th=cutloss_th, increase_flag=1)
 
 
+	if (task_option == 'Monitoring Trading'):
+		if (selected_symbol != 'Select symbol'):
 			ct = Coin_Trading(symbol=selected_symbol)
-			#ct.rsi_trading(start_time, rsi_period, sma_period, lower_th, upper_th, bar_length, units, position)
-			ct.rsi_trading(start_time, bar_length, rsi_period, sma_period, lower_threshold, upper_threshold, 
-				rsi_limit1=rsi_limit1,rsi_limit2=rsi_limit2,position = position, cutloss_flag=1, cutloss_th=cutloss_th, increase_flag=1)
-
-
+			file_name="/".join([cf.S3_DATA_CRYPTO_PATH, selected_symbol, '_trading.csv'])
+			trading_df = dm.read_csv_file(bucket_name=cf.S3_DATA_PATH, file_name=file_name, type='s3')
+			trading_column = ['price', 'Volume', 'rsi', 'rsi_1', 'rsi_ratio', 'position', 'rsi_signal', 'strategy']
+			from_date = str(trading_df.index[0])[0:10]
+			to_date = str(pd.to_datetime(trading_df.index[-1]) + timedelta(hours = 24))
+			ct.plot_RSI_signal(trading_df.iloc[from_date:to_date,:], selected_symbol)
+			st.write(trading_df[trading_column])
 
 
 
