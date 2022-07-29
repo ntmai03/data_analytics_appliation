@@ -182,7 +182,8 @@ def app():
 
 
 	if (task_option == 'Monitoring Trading'):
-		if (selected_symbol != 'Select symbol'):
+		#if (selected_symbol != 'Select symbol'):
+		if((selected_symbol == 'WAVEUSDT') | (selected_symbol == 'DOTUSDT') | (selected_symbol == 'LINKUSDT')):
 			ct = Coin_Trading(symbol=selected_symbol)
 			file_name="/".join([cf.S3_DATA_CRYPTO_PATH, selected_symbol, '_trading.csv'])
 			trading_df = dm.read_csv_file(bucket_name=cf.S3_DATA_PATH, file_name=file_name, type='s3')
