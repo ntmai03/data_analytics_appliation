@@ -562,9 +562,16 @@ class Coin_Trading:
                 st.write('waiting until ', next_time)
                 st.write('start counting ...')
                 # store corpus to csv file
+                
                 dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
-                                  file_name="/".join([cf.S3_DATA_CRYPTO_PATH, self.symbol, '_trading.csv']), 
+                                  file_name="/".join([cf.S3_DATA_CRYPTO_PATH, self.symbol + '_trading.csv']), 
                                   data=result_df, type='s3')
+                '''
+
+                dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
+                                  file_name="/".join([cf.S3_DATA_BOOKING, 'DOTUSDT.csv']), 
+                                  data=result_df, type='s3')
+                '''
 
             st.write('\n', str(current_time), end=" ", flush=True)
             time.sleep(60)
