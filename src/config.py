@@ -25,7 +25,7 @@ S3_LOCATION_CONSTRAINT = 'us-east-2'
 S3_DATA_PATH = 'datool-data'
 S3_DATA_RAW_PATH = 'raw/'
 S3_DATA_PROCESSED_PATH = 'processed/'
-S3_DATA_CRYPTO_PATH = 'crypto/'
+
 
 """
 # Get  key ans secret to access resources
@@ -60,6 +60,7 @@ binance_secret_key = st.secrets["binance_secret_access_key"]
 CONFIF FOR HOTEL RECOMMENDATION APP
 """
 # AWS S3
+S3_DATA_CRYPTO_PATH = 'crypto'
 S3_DATA_BOOKING = 'booking'
 S3_BOOKING_REVIEW = 'review'
 S3_BOOKING_HOTEL = 'hotel'
