@@ -1,6 +1,7 @@
 import streamlit as st
 import datetime
 import time
+from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 
@@ -188,11 +189,16 @@ def app():
 			ct = Coin_Trading(symbol=selected_symbol)
 			file_name="/".join([cf.S3_DATA_CRYPTO_PATH, selected_symbol + '_trading.csv'])
 			trading_df = dm.read_csv_file(bucket_name=cf.S3_DATA_PATH, file_name=file_name, type='s3')
+			# trading_df.index = trading_df['Date']
 			trading_column = ['price', 'Volume', 'rsi', 'rsi_1', 'rsi_ratio', 'position', 'rsi_signal', 'strategy']
 			st.write(trading_df)
-			from_date = str(trading_df.index[0])[0:10]
-			to_date = str(pd.to_datetime(trading_df.index[-1]) + timedelta(hours = 24))
-			ct.plot_RSI_signal(trading_df.iloc[from_date:to_date,:], selected_symbol)
+			start_date =  pd.to_datetime(trading_df.index[0])
+			end_date =  pd.to_datetime(trading_df.index[-1]) + timedelta(hours = 24)
+			n_days = end_date - start_date
+			for i in range(0, n_days.days, 1):
+				start_index = 96*i + 0
+				end_index = 96*i + 96
+				ct.plot_RSI_signal(trading_df.iloc[start_index:end_index,:], selected_symbol)
 			
 
 
