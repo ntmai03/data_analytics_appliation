@@ -1,7 +1,7 @@
 import streamlit as st
 import datetime
 import time
-from datetime import datetime, timedelta
+from datetime import timedelta
 import pandas as pd
 import numpy as np
 
