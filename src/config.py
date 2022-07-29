@@ -25,6 +25,7 @@ S3_LOCATION_CONSTRAINT = 'us-east-2'
 S3_DATA_PATH = 'datool-data'
 S3_DATA_RAW_PATH = 'raw/'
 S3_DATA_PROCESSED_PATH = 'processed/'
+S3_DATA_CRYPTO_PATH = 'crypto/'
 
 """
 # Get  key ans secret to access resources
