@@ -228,7 +228,9 @@ class Coin_Trading:
                             current_position = 0
                             data.loc[index, 'strategy'] = 'SELL'
                     if(current_position == 1):
-                        if(current_price < buy_price - cutloss_th):
+                        #if(current_price < buy_price - cutloss_th):
+                        difference = current_price - buy_price
+                        if( difference <= - ((cutloss_th * buy_price) /100)):
                             current_position = 0
                             data.loc[index, 'strategy'] = 'SELL'   
                             cut_loss = 1
@@ -255,7 +257,9 @@ class Coin_Trading:
                             data.loc[index, 'strategy'] = 'SELL'
                     # cut loss
                     if(current_position == 1):
-                        if(current_price < buy_price - cutloss_th):
+                        #if(current_price < buy_price - cutloss_th):
+                        difference = current_price - buy_price
+                        if( difference <= - ((cutloss_th * buy_price) /100)):
                             current_position = 0
                             data.loc[index, 'strategy'] = 'SELL'   
                             cut_loss = 1
@@ -364,11 +368,16 @@ class Coin_Trading:
     def calculate_performance(self):
 
         self.trading_data["returns"] = np.log(self.trading_data.price.div(self.trading_data.price.shift(1)))
-        self.trading_data["strategy_returns"] =np.log(self.trading_data.price.div(self.trading_data.price.shift(1)))
-        self.trading_data.loc[self.trading_data['position'] == 0, 'strategy_returns'] = 0
         self.trading_data["creturns"] = self.trading_data["returns"].cumsum().apply(np.exp)
+        
+        self.trading_data["strategy_returns"] =np.log(self.trading_data.price.div(self.trading_data.price.shift(1)))
+        # case 1: udpate rsi returns on records not holding asset
+        self.trading_data.loc[(self.trading_data['position'] == 0) & (~self.trading_data['strategy'].isin(['BUY','SELL'])), 'strategy_returns'] = 0
+        # case 2: update rsi returns on records not buying to 0
+        self.trading_data.loc[(self.trading_data['position'] == 1) & (self.trading_data['strategy']=='BUY'), 'strategy_returns'] = 0           
         self.trading_data["strategy_creturns"] = self.trading_data["strategy_returns"].cumsum().apply(np.exp)  
 
+        st.write(self.trading_data)
 
     def plot_test_performance(self):
         fig = go.Figure()
@@ -410,7 +419,7 @@ class Coin_Trading:
 
 
     def rsi_strategy(self, rsi_period, sma_period, lower_th, upper_th, rsi_limit1=None,rsi_limit2=None,
-                     current_position=0, cutloss_flag=1, cutloss_th=0.3, increase_flag=1,units=1):
+                     current_position=0, cutloss_flag=1, cutloss_th=1, increase_flag=1,units=1):
            
         data = self.data.copy()
         
@@ -437,13 +446,8 @@ class Coin_Trading:
         else:
             data.loc[(data['rsi'] < lower_th) & (data['rsi_ratio'] > rsi_limit1), 'rsi_signal'] = 'BUY'
 
-        print('test this case', cutloss_flag, increase_flag)
-
         index = data.index[-1]
-        print('test this case', cutloss_flag, increase_flag)
-
         if((cutloss_flag == 0) & (increase_flag == 0)):
-            print('test case 1')
             current_price = data.loc[index, 'price']
             if(data.loc[index,'rsi_signal'] == "BUY"):
                 if(current_position == 0):
@@ -456,7 +460,6 @@ class Coin_Trading:
             data.loc[index,'position'] = current_position                
             
         if((cutloss_flag == 1) & (increase_flag == 0)):
-            print('test case 2')
             if(cut_loss == 0):
                 current_price = data.loc[index, 'price']
                 if(data.loc[index,'rsi_signal'] == "BUY"):
@@ -469,7 +472,9 @@ class Coin_Trading:
                         current_position = 0
                         data.loc[index, 'strategy'] = 'SELL'
                 if(current_position == 1):
-                    if(current_price < buy_price - cutloss_th):
+                    #if(current_price < buy_price - cutloss_th):
+                    difference = current_price - buy_price
+                    if( difference <= - ((cutloss_th * buy_price) /100)):
                         current_position = 0
                         data.loc[index, 'strategy'] = 'SELL'   
                         cut_loss = 1
@@ -481,8 +486,7 @@ class Coin_Trading:
                     cut_loss = 0
             data.loc[index,'position'] = current_position
             
-        if((cutloss_flag == 1) & (increase_flag == 1)):
-            print('test case 3')            
+        if((cutloss_flag == 1) & (increase_flag == 1)):     
             if(cut_loss == 0):
                 current_price = data.loc[index, 'price']
                 if(data.loc[index,'rsi_signal'] == "BUY"):
@@ -496,7 +500,9 @@ class Coin_Trading:
                         data.loc[index, 'strategy'] = 'SELL'
                 # cut loss
                 if(current_position == 1):
-                    if(current_price < buy_price - cutloss_th):
+                    #if(current_price < buy_price - cutloss_th):
+                    difference = current_price - buy_price
+                    if( difference <= - ((cutloss_th * buy_price) /100)):
                         current_position = 0
                         data.loc[index, 'strategy'] = 'SELL'   
                         cut_loss = 1
@@ -518,7 +524,7 @@ class Coin_Trading:
 
 
     def rsi_trading(self, start_time, bar_length, rsi_period, sma_period, lower_th, upper_th, rsi_limit1,rsi_limit2,
-        position=0, cutloss_flag=1, cutloss_th=0.3, increase_flag=1,units=1):      
+        position=0, cutloss_flag=1, cutloss_th=1, increase_flag=1,units=1):      
         result_df = pd.DataFrame()
         current_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
         current_time = pd.to_datetime(current_time)
@@ -554,6 +560,11 @@ class Coin_Trading:
                 next_time = pd.to_datetime(self.data.loc[index, 'Date']) + timedelta(hours = 0.25)
                 st.write('waiting until ', next_time)
                 st.write('start counting ...')
+                # store corpus to csv file
+                dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
+                                  file_name="/".join([cf.S3_DATA_CRYPTO_PATH, self.symbol, '_trading.csv']), 
+                                  data=result_df, type='s3')
+
             st.write('\n', str(current_time), end=" ", flush=True)
             time.sleep(60)
             current_time = pd.to_datetime(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
