@@ -157,7 +157,8 @@ def app():
 
 
 	if (task_option == 'Trading Demo'):
-		if (selected_symbol != 'Select symbol'):
+		#if (selected_symbol != 'Select symbol'):
+		if((selected_symbol == 'WAVEUSDT') | (selected_symbol == 'DOTUSDT') | (selected_symbol == 'LINKUSDT')):
 			TODAY = datetime.date.today() 
 			start_time = TODAY - datetime.timedelta(cf.data['default_start_trading'])
 			rsi_period = st.sidebar.number_input('rsi_period',1, 20, 6)
@@ -182,16 +183,17 @@ def app():
 
 
 	if (task_option == 'Monitoring Trading'):
-		#if (selected_symbol != 'Select symbol'):
-		if((selected_symbol == 'WAVEUSDT') | (selected_symbol == 'DOTUSDT') | (selected_symbol == 'LINKUSDT')):
+		if (selected_symbol != 'Select symbol'):
+		# if((selected_symbol == 'WAVEUSDT') | (selected_symbol == 'DOTUSDT') | (selected_symbol == 'LINKUSDT')):
 			ct = Coin_Trading(symbol=selected_symbol)
-			file_name="/".join([cf.S3_DATA_CRYPTO_PATH, selected_symbol, '_trading.csv'])
+			file_name="/".join([cf.S3_DATA_CRYPTO_PATH, selected_symbol + '_trading.csv'])
 			trading_df = dm.read_csv_file(bucket_name=cf.S3_DATA_PATH, file_name=file_name, type='s3')
 			trading_column = ['price', 'Volume', 'rsi', 'rsi_1', 'rsi_ratio', 'position', 'rsi_signal', 'strategy']
+			st.write(trading_df)
 			from_date = str(trading_df.index[0])[0:10]
 			to_date = str(pd.to_datetime(trading_df.index[-1]) + timedelta(hours = 24))
 			ct.plot_RSI_signal(trading_df.iloc[from_date:to_date,:], selected_symbol)
-			st.write(trading_df[trading_column])
+			
 
 
 
