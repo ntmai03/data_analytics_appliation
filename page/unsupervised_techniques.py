@@ -49,34 +49,48 @@ def app():
         news.load_ds()
         st.write('Full dataset dimensionality: ', news.data[news.RAW_VARS].shape)
         st.write(news.data[news.RAW_VARS].head())
+        st.write("Column 'text' is the concatenation of column 'headline' and 'short_description'. The analysis use column 'text' to cluster data")
+        st.write("View column text in the first five rows:")
+        for i in range(0, 5):
+            st.write(news.data.text[i])
+            st.write(" ")
 
-        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3.  Split data to train and test set</p>', unsafe_allow_html=True)
+
+    #============================================= Data Processing ========================================
+    if task_option == 'Data Processing':
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1.  Overview</p>', unsafe_allow_html=True)
+        st.write("The following steps are applied to convert text data to numeric data: ")
+        st.write("Detect language and filter only English")
+        st.write("Split data into train set and test set")
+        st.write("Normalize text")
+        st.write("Feature Extraction using word embedding with Word2Vec model")
+        st.write("Scaling independent features")
+        st.write("Convert target from categorical data to numeric data")
+
+        news = NewsCategory()
+        news.load_preprocessed_ds("normalized_News_Category.csv")
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2.  Split data to train and test set</p>', unsafe_allow_html=True)
+        news.split_data()
         st.write('Train set dimensionality: ', news.df_train[news.RAW_VARS].shape)
         st.write(news.df_train[news.RAW_VARS].head())
         st.write('Test set dimensionality: ', news.df_test[news.RAW_VARS].shape)
         st.write(news.df_test[news.RAW_VARS].head())
 
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Text normalization</p>', unsafe_allow_html=True)
+        st.write(news.df_train.head())
 
-
-    #============================================= Data Processing ========================================
-    if task_option == 'Data Processing':
-        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Text normalization</p>', unsafe_allow_html=True)
-        news = NewsCategory()
-        news.load_ds()
-        st.write(news.data.head())
-        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Word Embedding Vectorizer</p>', unsafe_allow_html=True)
-        news.preprocess_data(news.df_train, train_flag=1)
-
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 4. Word Embedding Vectorizer</p>', unsafe_allow_html=True)
+        processed_data = news.preprocess_data(news.df_train, train_flag=1)
+        processed_data.head()
 
 
     #=========================================== Clustering ======================================
     if task_option == 'Auto Encoder':
         news = NewsCategory()
         st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Train auto encoder</p>', unsafe_allow_html=True)
-        news.autoencoder_analysis(encoding1_dim=60, encoding2_dim=600, latent_dim=15)
+        news.autoencoder_analysis(encoding1_dim=80, encoding2_dim=600, latent_dim=18)
         news.autoencoder_transform(news.X_train, 1)
-        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Embededed data from auto encoder</p>', unsafe_allow_html=True)
-        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Transform embededed data to tsne data for visualization</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Transform embededed data to tsne data for visualization</p>', unsafe_allow_html=True)
         news.transform_tsne(news.ae_embeddings, 1)
         news.tsne_data = news.load_preprocessed_ds('News_Category_tsne_data.csv')
         news.plot_cluster(news.tsne_data.values, news.y_train)
@@ -85,7 +99,7 @@ def app():
     if task_option == 'PCA':
         news = NewsCategory()
         news.pca_analysis(n_components=50)
-        # news.transform_tsne(news.pca_data, 2)
+        news.transform_tsne(news.pca_data, 2)
         news.tsne_data = news.load_preprocessed_ds('News_Category_PCA_tsne_data.csv')
         news.plot_cluster(news.tsne_data.values, news.y_train)
 
@@ -130,16 +144,16 @@ def app():
 
     
     if task_option == 'Prediction':
-        news_input = st.text_input("Input text", 'new amusement park ride worth waiting line photosnewthissummer amusement park ride around world think worth wait mindnumbing line')
-        news_input = usu.utils_preprocess_text(news_input, flg_stemm=True, flg_lemm=True, lst_stopwords=lst_stopwords)
-        news_object = pd.DataFrame(news_input, columns=['text_clean'])
+        news_input = st.text_input("Input text", 'Hotels That Take You Back in Time. These ancient dwellings are of high historical, artistic and architectural value; they are places not only to visit, but also to live and experience.')
+        news_input = usu.utils_preprocess_text(news_input, flg_stemm=True, flg_lemm=True)
+        news_object = dict({'text_clean': [news_input]})
+        news_object = pd.DataFrame.from_dict(news_object)
         if st.button('Predict'):
             news = NewsCategory()
-            news.data_preprocessing(news_object, train_flag=0)
-            news.X_new = news.processed_data.drop([model.TARGET], axis=1)
-            news.y_new = news.processed_data[model.TARGET]
-            news.autoencoder_transform(news.X_new, 0)
-            cluster = news.kmeans_analysis(news.ae_embbeding, 4, 2)
+            processed_data = news.preprocess_data(news_object, train_flag=0)
+            news.autoencoder_transform(processed_data, 0)
+            processed_data = float(processed_data)
+            cluster = news.kmeans_analysis(news.ae_embeddings, 4, 2)
             st.write(cluster)
     
 

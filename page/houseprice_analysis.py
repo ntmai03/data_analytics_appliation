@@ -263,48 +263,17 @@ def app():
 
 		if model_option == 'Linear Regression':
 			houseprice = HousePrice()
-			st.markdown('<p style="color:Green; font-size: 25px;"> 1. Linear Regression Model - Baseline model</p>', unsafe_allow_html=True)
+			st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Linear Regression Model - Baseline model</p>', unsafe_allow_html=True)
 			result = houseprice.train_regression_statsmodel(flag=0)
 			st.write(result.summary())
-			st.write("Notice that there is strange result for coefiicients having outliers such as bedrroms, sqft_living15,.. as their coefficients are negative while it was shown in exploratory step that they have positive correlation with target var")
 			st.write('--------------------------------------------------')
 
-			st.markdown('<p style="color:Green; font-size: 25px;"> 2. Examine violations in Linear Regression assunmptions', unsafe_allow_html=True)
-			st.write('**1. Examine distribution of target var**')
-			regu.plot_continuous_var(pd.Series(houseprice.y_train.values), houseprice.TARGET)
-			st.write('**2. Examine distribution of continuous vars**')
-			for var in houseprice.OUTLIER_VARS:
-				st.write(var)
-				regu.analyze_continuous_var(houseprice.processed_X_train[var], houseprice.y_train)
-			st.write('Variables sqft_living, sqft_lot, sqft_above, sqft_basement, sqft_living15, sqft_lot15, sqft_ratio are highly skewed which indicate they do not follow Normal distrition')
-			st.write('It can be seen that there exist outlilers in many variables: bedrooms, sqft_living, sqft_lot')
-			st.write('For optimal results, we would be looking for a normal distribution of price. However has an exponential one with existing outliers in the price variable. This is a problem for our regression')
-			
-			st.write('**3. Examine distribution of Multicolinearity**: To determine co-linearity, we use The IAF produces a measure which estimates how much larger the square root of the standard error of an estimate is compared to a situation where the variable was completely uncorrelated with the other predictors')
-			vif = houseprice.check_multi_colinearity()
-			st.write(vif)
-			st.write('Variables have high VIF values: sqft_living, bedrooms, bathrooms, garde, sqft_living_15, sqft_ratio')
-			st.write('--------------------------------------------------')
-
-			st.markdown('<p style="color:Green; font-size: 25px;"> 3. Fixing assumption violations in Lienar Regression</p>', unsafe_allow_html=True)
+			st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Fixing assumption violations in Lienar Regression</p>', unsafe_allow_html=True)
 			st.write('Failure to meet one or more of the model assumptions may end up in a poor model performance. In order to fix these problems, sometimes a transformation of these variables helps improve the linear regression model')
 			st.write('The followings are some approaches to fix these violations: (a) Log transform target var, (b)  adjust the high-leverage points to a threshold value to alliviate the effect of them, (c) remove features with high vif value')
 			result = houseprice.train_regression_statsmodel(flag=1)
-			
-			st.write('**1. Examine distribution of target var**')
-			regu.plot_continuous_var(houseprice.y_train, houseprice.TARGET)
-			st.write('**2. Examine distribution of continuous vars**')
-			for var in houseprice.OUTLIER_VARS:
-				st.write(var)
-				regu.analyze_continuous_var(houseprice.processed_X_train[var], houseprice.y_train)
-			st.write('**3. Remove features with high VIF values**')
-			vif = houseprice.check_multi_colinearity()
-			st.write(vif)
-			st.write('**4. Feature Selection**')
-			st.write('**5. Final Result**')
 			st.write(result.summary())
-			st.write('--------------------------------------------------')
-
+	
 			
 		if model_option == 'Decision Tree':
 			st.sidebar.markdown('max_depth')
@@ -329,7 +298,7 @@ def app():
 			st.sidebar.markdown('min_samples_split')
 			min_samples_split = st.sidebar.slider("",50, 150, 100, key="MIN_SAMPLES_SPLIT")
 			st.sidebar.markdown('n_estimators')
-			n_estimators = st.sidebar.slider("",50, 500, 300, key="N_ESTIMATORS")
+			n_estimators = st.sidebar.slider("",50, 500, 100, key="N_ESTIMATORS")
 			st.sidebar.header('')
 			if st.sidebar.button("Train"):
 				houseprice = HousePrice()
@@ -346,7 +315,7 @@ def app():
 			st.sidebar.markdown('min_samples_split')
 			min_samples_split = st.sidebar.slider("",50, 150, 100, key="MIN_SAMPLES_SPLIT")
 			st.sidebar.markdown('n_estimators')
-			n_estimators = st.sidebar.slider("",50, 500, 300, key="N_ESTIMATORS")
+			n_estimators = st.sidebar.slider("",50, 500, 100, key="N_ESTIMATORS")
 			st.sidebar.header('')
 			if st.sidebar.button("Train"):
 				houseprice = HousePrice()
@@ -376,7 +345,7 @@ def app():
 	    zipcode = st.text_input("zipcode", '98178')
 
 	    if st.button("Predict"):
-	    	new_obj = dict({'price': 221900.0,
+	    	new_obj = dict({'price':  0,   #221900.0
 	    					'bedrooms':[bedrooms],
 	    					'bathrooms':[bathrooms],
 	    					'sqft_living':[sqft_living],
@@ -402,7 +371,7 @@ def app():
 	    	houseprice = HousePrice()
 	    	new_obj = houseprice.data_processing_pipeline(new_obj)
 	    	new_obj = new_obj[houseprice.TRAIN_VARS]
-	    	st.write(new_obj)
+	    	#st.write(new_obj)
 	    	model_file = os.path.join(cf.TRAINED_MODEL_PATH, "house_price_gbt.pkl")
 	    	model = joblib.load(model_file)
 	    	st.write("**Predicted Price**: ", model.predict(new_obj))
