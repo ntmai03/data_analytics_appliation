@@ -134,10 +134,10 @@ class HousePrice:
                   'yr_renovated', 'lat', 'long', 'sqft_living15', 'sqft_lot15', 'sqft_ratio', 
                   'zipcode', 'season_spring', 'season_summer', 'season_winter']
 
-    OUTLIER_VARS = ['sqft_lot', 'sqft_above', 'sqft_lot15','sqft_basement', 'bedrooms']
-    OUTLIER_DICT = {'sqft_lot':43560, 'sqft_lot15':19647, 'sqft_above':4070.0, 'sqft_basement':1580, 'bedrooms':10}
-    NO_MULTICOLINEARTITY_VARS = ['sqft_living',  'sqft_lot', 'floors', 'waterfront', 'view', 'condition', 'sqft_basement',
-                                 'yr_built', 'yr_renovated', 'lat', 'long', 'zipcode', 'season_spring', 'season_summer', 'season_winter']
+    OUTLIER_DICT = {'sqft_living':4610, 'sqft_living15':3770, 'sqft_lot':43560, 
+                    'sqft_lot15':19647, 'sqft_above':4070.0, 'sqft_basement':1150, 
+                    'bedrooms':10}
+    BEST_FEATURES = ['view', 'zipcode', 'sqft_living', 'long', 'waterfront', 'season_spring', 'condition', 'floors', 'sqft_lot', 'yr_renovated']
 
     def __init__(self):
  
@@ -490,7 +490,7 @@ class HousePrice:
         if(flag == 1):
             self.load_final_dataset(flag = 1)
             # add constant
-            self.TRAIN_VARS = self.NO_MULTICOLINEARTITY_VARS
+            self.TRAIN_VARS = self.BEST_FEATURES
         # not fixing linear regression violation
         else:
             self.load_final_dataset(flag = 0)
@@ -559,13 +559,13 @@ class HousePrice:
 
         # Performance metric
         st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Performance metrics</p>', unsafe_allow_html=True)
-
         st.write('Train set')
         reu.get_metrics(train_score, self.y_train, pred_train)
         st.write('Test set')
         reu.get_metrics(test_score, self.y_test, pred_test)
 
         # Trees
+        '''
         st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Visualize the tree</p>', unsafe_allow_html=True)
         graph = Source(sklearn.tree.export_graphviz(
                 model,
@@ -582,13 +582,14 @@ class HousePrice:
         with open('house_price_tree.png', 'wb') as f:
             f.write(png_data)
         st.image(png_data)
+        '''
 
         # important features
-        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3.  Feature Importance</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Feature Importance</p>', unsafe_allow_html=True)
         reu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
 
         # examine residual plot
-        st.markdown('#### Assess the goodness of model fitting')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Assess the goodness of model fitting</p>', unsafe_allow_html=True)
         fig, axes = plt.subplots(2,4,figsize=(12,8))
         reu.plot_residual(axes[0][0],axes[0][1],axes[0][2],axes[0][3],pred_train,self.y_train,'Decision Tree: {}'.format(train_score),'Residual plot for train data')
         reu.plot_residual(axes[1][0],axes[1][1],axes[1][2],axes[1][3],pred_test,self.y_test,'Decision Tree: {}'.format(test_score),'Residual plot for test data')
@@ -597,6 +598,7 @@ class HousePrice:
         st.image(buf)
 
         # cross validataion
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 4. Cross Validataion</p>', unsafe_allow_html=True)
         reu.train_cross_validation(model, self.processed_X_train, self.y_train)
 
 
@@ -627,18 +629,18 @@ class HousePrice:
         test_score = model.score(self.processed_X_test, self.y_test)
 
         # Performance metric
-        st.markdown('#### Performance metrics')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Performance metrics</p>', unsafe_allow_html=True)
         st.write('Train set')
         reu.get_metrics(train_score, self.y_train, pred_train)
         st.write('Test set')
         reu.get_metrics(test_score, self.y_test, pred_test)
 
         # important features
-        st.markdown('#### Feature Importance')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Feature Importance</p>', unsafe_allow_html=True)
         reu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
 
         # examine residual plot
-        st.markdown('#### Assess the goodness of model fitting')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Assess the goodness of model fitting</p>', unsafe_allow_html=True)
         fig, axes = plt.subplots(2,4,figsize=(12,8))
         reu.plot_residual(axes[0][0],axes[0][1],axes[0][2],axes[0][3],pred_train,self.y_train,'Decision Tree: {}'.format(train_score),'Residual plot for train data')
         reu.plot_residual(axes[1][0],axes[1][1],axes[1][2],axes[1][3],pred_test,self.y_test,'Decision Tree: {}'.format(test_score),'Residual plot for test data')
@@ -647,7 +649,7 @@ class HousePrice:
         st.image(buf)
 
         # cross validataion
-        st.markdown('#### 5-fold Cross Validation')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 4. Cross Validataion</p>', unsafe_allow_html=True)
         reu.train_cross_validation(model, self.processed_X_train, self.y_train, k =5)
 
 
@@ -678,18 +680,18 @@ class HousePrice:
         test_score = model.score(self.processed_X_test, self.y_test)
 
         # Performance metric
-        st.markdown('#### Performance metrics')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Performance metrics</p>', unsafe_allow_html=True)
         st.write('Train set')
         reu.get_metrics(train_score, self.y_train, pred_train)
         st.write('Test set')
         reu.get_metrics(test_score, self.y_test, pred_test)
 
         # important features
-        st.markdown('#### Feature Importance')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Feature Importance</p>', unsafe_allow_html=True)
         reu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
 
         # examine residual plot
-        st.markdown('#### Assess the goodness of model fitting')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Assess the goodness of model fitting</p>', unsafe_allow_html=True)
         fig, axes = plt.subplots(2,4,figsize=(12,8))
         reu.plot_residual(axes[0][0],axes[0][1],axes[0][2],axes[0][3],pred_train,self.y_train,'Decision Tree: {}'.format(train_score),'Residual plot for train data')
         reu.plot_residual(axes[1][0],axes[1][1],axes[1][2],axes[1][3],pred_test,self.y_test,'Decision Tree: {}'.format(test_score),'Residual plot for test data')
@@ -698,63 +700,8 @@ class HousePrice:
         st.image(buf)
 
         # cross validataion
-        st.markdown('#### 5-fold Cross Validation')
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 4. Cross Validataion</p>', unsafe_allow_html=True)
         reu.train_cross_validation(model, self.processed_X_train, self.y_train, k =5)
-
-
-
-    ##############################################################################################
-    # 
-    ##############################################################################################
-    def forward_selection(self, significance_level=0.05):
-        initial_features = self.X_train.columns.tolist()
-        best_features = []
-        while(len(initial_features) > 0):
-            remaining_features = list(set(initial_features) - set(best_features))
-            new_pval = pd.Series(index=remaining_features)
-            for new_column in remaining_features:
-                model = sm.Logit(self.y_train, sm.add_constant(self.X_train[best_features + [new_column]])).fit()
-                new_pval[new_column] = model.pvalues[new_column]
-            min_p_value = new_pval.min()
-            if(min_p_value < significance_level):
-                best_features.append(new_pval.idxmin())
-            else:
-                break
-
-        return best_features
-
-
-
-    ##############################################################################################
-    # 
-    ##############################################################################################
-    def backward_elimination(self, significance_level=0.05):
-        features = self.X_train.columns.tolist()
-        while(len(features) > 0):
-            features_with_constant = sm.add_constant(self.X_train[features])
-            p_values = sm.Logit(self.y_train, features_with_constant).fit().pvalues[1:]
-            max_p_value = p_values.max()
-            if(max_p_value >= significance_level):
-                excluded_feature = p_values.idxmax()
-                features.remove(excluded_feature)
-            else:
-                break
-
-        return features
-
-
-
-    ##############################################################################################
-    # 
-    ##############################################################################################
-    def regression_important_feature(self):
-        forward_selection_features = self.forward_selection()
-        st.write('Forward Selection: ')
-        st.write(forward_selection_features)
-        
-        backward_selection_features = self.backward_elimination()
-        st.write('Backward Elimination: ')
-        st.write(backward_selection_features)
 
 
 

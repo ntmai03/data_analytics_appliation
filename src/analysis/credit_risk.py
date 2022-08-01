@@ -676,6 +676,7 @@ class CreditRisk:
         self.model = model
 
         # Trees
+        '''
         st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1.  Visualize the tree</p>', unsafe_allow_html=True)
         graph = Source(sklearn.tree.export_graphviz(
                 model,
@@ -692,9 +693,10 @@ class CreditRisk:
         with open('dtree_structure.png', 'wb') as f:
             f.write(png_data)
         st.image(png_data)
+        '''
 
         # important features
-        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2.  Feature Importance</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1.  Feature Importance</p>', unsafe_allow_html=True)
         clfu.feature_importance(model.feature_importances_, self.TRAIN_VARS)
 
         # Prediction
@@ -705,7 +707,7 @@ class CreditRisk:
         self.pred_test = np.where(self.prob_test[:,1] > threshold, 1, 0) 
 
         # Performance Evaluation
-        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3.  Performance Evaluation</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2.  Performance Evaluation</p>', unsafe_allow_html=True)
         self.evaluate_performance()
 
 

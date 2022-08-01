@@ -14,6 +14,7 @@ from io import BytesIO
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas_ta as pta
+import streamlit as st
 
 import config as cf
 import util.data_manager as dm
@@ -286,9 +287,11 @@ class Coin_Trading:
 
         data = self.trading_data
         
-        fig, axes = plt.subplots(1,1,figsize=(18,8))
-        data[["price", "position"]].plot(secondary_y = "position",title = "RSI Indicator")
-
+        fig, ax = plt.subplots(1,1,figsize=(18,8))
+        ax.plot()
+        plt.plot(data['price'], linewidth=2, label='price')
+        ax2=ax.twinx()
+        ax2.plot(data.position,color="red")
         buf = BytesIO()
         fig.savefig(buf, format="png")
         st.image(buf)
@@ -378,7 +381,6 @@ class Coin_Trading:
         self.trading_data.loc[(self.trading_data['position'] == 1) & (self.trading_data['strategy']=='BUY'), 'strategy_returns'] = 0           
         self.trading_data["strategy_creturns"] = self.trading_data["strategy_returns"].cumsum().apply(np.exp)  
 
-        st.write(self.trading_data)
 
     def plot_test_performance(self):
         fig = go.Figure()
@@ -431,6 +433,7 @@ class Coin_Trading:
         data['position'] = current_position
         data['strategy'] = np.nan
         cut_loss = 0
+        buy_price = 0
 
         data['rsi_1'] = data['rsi'].shift(1)
         data['rsi_ratio'] = data['rsi']/data['rsi_1']
@@ -525,7 +528,7 @@ class Coin_Trading:
 
 
     def rsi_trading(self, start_time, bar_length, rsi_period, sma_period, lower_th, upper_th, rsi_limit1,rsi_limit2,
-        position=0, cutloss_flag=1, cutloss_th=1, increase_flag=1,units=1):      
+        position=0, cutloss_flag=1, cutloss_th=1, increase_flag=1,units=2):      
         result_df = pd.DataFrame()
         current_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
         current_time = pd.to_datetime(current_time)
@@ -566,12 +569,7 @@ class Coin_Trading:
                 dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
                                   file_name="/".join([cf.S3_DATA_CRYPTO_PATH, self.symbol + '_trading.csv']), 
                                   data=result_df, type='s3')
-                '''
 
-                dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
-                                  file_name="/".join([cf.S3_DATA_BOOKING, 'DOTUSDT.csv']), 
-                                  data=result_df, type='s3')
-                '''
 
             st.write('\n', str(current_time), end=" ", flush=True)
             time.sleep(60)

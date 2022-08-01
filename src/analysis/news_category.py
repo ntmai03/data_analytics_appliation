@@ -38,6 +38,7 @@ nltk.download('stopwords')
 nltk.download('punkt')
 nltk.download('wordnet')
 lst_stopwords = nltk.corpus.stopwords.words("english")
+import langdetect
 
 import string
 import re
@@ -99,18 +100,20 @@ class NewsCategory:
         self.y_test = None
         self.X_valid = None
         self.y_valid = None
-        self.load_ds()
 
 
     def load_ds(self):
         df = dm.read_csv_file(cf.S3_DATA_PATH, cf.S3_DATA_RAW_PATH + "News_Category.csv")
-        # df = df.sample(frac=1)
-        df_train, df_test = model_selection.train_test_split(df, test_size=0.1, random_state=9)
+        self.data = df
+
+    def split_data(self):
+        normalized_data = self.load_preprocessed_ds("normalized_News_Category.csv")
+        df_train, df_test = model_selection.train_test_split(normalized_data, test_size=0.1, random_state=9)
         self.df_train = df_train.reset_index(drop=True)
         self.df_test = df_test.reset_index(drop=True)
         self.y_train  = df_train[self.TARGET]
         self.y_test  = df_test[self.TARGET]
-        self.data = df
+        
 
 
     def load_preprocessed_ds(self, data_file):
@@ -121,12 +124,11 @@ class NewsCategory:
     def load_tsne_data(self):
         df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + "News_Category_tsne_data.csv")
         self.tsne_data = df
-        st.write(df.head())
+
 
     def load_ae_embedding(self):
         df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + "News_Category_ae_embbeding.csv")
         self.ae_embbeding = df
-        st.write(df.head())
 
 
     def word_tokenize(self, corpus):
@@ -203,6 +205,16 @@ class NewsCategory:
         return y
 
 
+    def select_valid_data(self, df):
+
+        data = df.copy()
+
+        data["text"] = data["text"].astype(str)
+        data['lang'] = data["text"].apply(lambda x: langdetect.detect(x) if x.strip() != "" else "")
+        data = data[data["lang"]=="en"]
+        return data
+
+
     def preprocess_data(self, df, train_flag=0):
 
         # load data
@@ -218,13 +230,14 @@ class NewsCategory:
         st.write('scaled data')
         st.write(scaled_data.head())
 
-        # transform target value from categorical data to numeric data
-        y = self.transform_target(data[self.TARGET])
-
-        processed_data = pd.concat([scaled_data,y], axis=1)
-        self.processed_data =  processed_data
   
+        processed_data = scaled_data
         if(train_flag == 1):
+            # transform target value from categorical data to numeric data
+            y = self.transform_target(data[self.TARGET])
+
+            processed_data = pd.concat([scaled_data,y], axis=1)
+            self.processed_data =  processed_data
             st.write('Storing preprocessed data in S3')
             # store embedding data to csv file
             dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
@@ -232,8 +245,6 @@ class NewsCategory:
                               data=processed_data, type='s3')
 
         return processed_data
-
-
 
 
     def average_word_vectors(words, model, vocabulary, num_features):
@@ -304,8 +315,8 @@ class NewsCategory:
         decoder_layer = Model(encoded_input, decoder_layer(encoded_input)) 
 
         # train model
-        nb_epoch = 20
-        batch_size = 10
+        nb_epoch = 30
+        batch_size = 10000
         autoencoder.compile(optimizer='adam', loss='mse')
         self.autoencoder = autoencoder
         self.encoder_layer = encoder_layer
@@ -351,13 +362,13 @@ class NewsCategory:
 
         if(train_flag == 1):
             dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
-                          file_name=cf.S3_DATA_PROCESSED_PATH + 'News_Category_ae_embbeding.csv', data=self.ae_embeddings, type='s3')
+                          file_name=cf.S3_DATA_PROCESSED_PATH + 'News_Category_ae_embbeding.csv', data=self.ae_embeddings, type='s3') 
 
 
     def kmeans_analysis(self, data, n_clusters=4, save_flag=0):
 
         if(save_flag == 2):
-            kmeans = joblib.load(kmeans, 'news_category_kmeans.pkl')
+            kmeans = joblib.load('news_category_kmeans.pkl')
             kmeans_cluster = kmeans.predict(data)
         elif(save_flag == 0):   
             kmeans = KMeans(n_clusters=n_clusters, random_state=9, init='k-means++')
@@ -399,6 +410,7 @@ class NewsCategory:
         buf = BytesIO()
         fig.savefig(buf, format="png")
         st.image(buf)
+
 
     def compare_cluster(self, X, y, cluster):
         fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(16,5))
