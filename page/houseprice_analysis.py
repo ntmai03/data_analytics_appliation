@@ -345,7 +345,7 @@ def app():
 	    zipcode = st.text_input("zipcode", '98178')
 
 	    if st.button("Predict"):
-	    	new_obj = dict({'price':  0,   #221900.0
+	    	new_obj = dict({'price':  1,   #221900.0
 	    					'bedrooms':[bedrooms],
 	    					'bathrooms':[bathrooms],
 	    					'sqft_living':[sqft_living],
@@ -367,11 +367,11 @@ def app():
 	    					'date': [date]
 	    		})
 	    	new_obj = pd.DataFrame.from_dict(new_obj)
-	    	st.write(new_obj)
+	    	# st.write(new_obj)
 	    	houseprice = HousePrice()
 	    	new_obj = houseprice.data_processing_pipeline(new_obj)
 	    	new_obj = new_obj[houseprice.TRAIN_VARS]
 	    	#st.write(new_obj)
 	    	model_file = os.path.join(cf.TRAINED_MODEL_PATH, "house_price_gbt.pkl")
 	    	model = joblib.load(model_file)
-	    	st.write("**Predicted Price**: ", model.predict(new_obj))
+	    	st.write("**Predicted Price**: ", model.predict(new_obj)[0])
