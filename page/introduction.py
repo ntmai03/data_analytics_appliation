@@ -1,5 +1,5 @@
 import streamlit as st
-
+import cv2 as cv
 
 def app():
 
@@ -7,7 +7,11 @@ def app():
 	st.markdown('<p style="color:lightgreen; font-size: 25px;"> Overview </p>', unsafe_allow_html=True)
 	st.write('This application is a demo of applying Data Science and AI techniques to build machine learning web apps for different types of Machine Learning problems as following: ')
 	st.markdown('<p style="color:green; font-size: 18px;"> 1. Regression Application</p> This aplication is to analyze house data and Build predicting tool to estimate true value of a house for supporting on making investment decision ', unsafe_allow_html=True)
+	video_file = open('regression.mp4', 'rb')
+	video_bytes = video_file.read()
+	st.video(video_bytes)
 	st.write('')
+
 	st.markdown('<p style="color:green; font-size: 18px;"> 2. Classification Application</p> Credit Risk Analysis is one of the most common and useful case of applying data science in order to estitmate credit risk of individuals', unsafe_allow_html=True)
 	st.write('')
 	st.markdown('<p style="color:green; font-size: 18px;"> 3. Finance Application</p> This application covers the whole process including collect trading data from Binance API, explore data, back testing and demo trading automatically', unsafe_allow_html=True)
