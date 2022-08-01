@@ -80,11 +80,16 @@ class BookingScrapper():
                 'name': dest_name,
                 'locale': 'en-gb',
             }
-        list_by_map_response = requests.request("GET", cf.BOOKING_SEARCH_LOCATION, headers=cf.BOOKING_RAPIDAPID_QUERYSTRING, params=list_by_map_querystring).json()     
-        dest_id = list_by_map_response[0]['dest_id']
-        nr_hotels = list_by_map_response[0]['nr_hotels']
+        list_by_map_response = requests.request("GET", cf.BOOKING_SEARCH_LOCATION, headers=cf.BOOKING_RAPIDAPID_QUERYSTRING, params=list_by_map_querystring).json()  
+        try:   
+            dest_id = list_by_map_response[0]['dest_id']
+            nr_hotels = list_by_map_response[0]['nr_hotels']
+
+            return dest_id, nr_hotels
+        except:
+            pass
+
         
-        return dest_id, nr_hotels
 
 
 
@@ -94,7 +99,7 @@ class BookingScrapper():
     def search_accommodation(self, dest_id='-2601889', filter_by_currency='GBP', city='London', nr_hotels=20):
         self.city = city
 
-        st.markdown('#### Start downloading hotels and storing on S3 ')
+        st.markdown('<p style="color:lightgreen; font-size: 30px;"> 1. Start downloading hotels and storing on S3</p>', unsafe_allow_html=True)
 
         # set a checkin date, checkout date in the future to get data
         in_d = datetime.datetime.today() + datetime.timedelta(days=cf.data['default_num_of_day'])
@@ -105,7 +110,7 @@ class BookingScrapper():
         # Define search conditions through setting values for paramters in url's request
         booking_list = []
         nr_pages = int(np.round(nr_hotels/cf.data['num_of_hotels_per_page']))
-        st.markdown('#### Number of pages to download: ')
+        st.write('**Number of pages to download**')
         st.write('Number of pages: ',  str(nr_pages))
         st.write('Page number: ')
         for page_numer in range(0, nr_pages):
@@ -146,7 +151,8 @@ class BookingScrapper():
                           file_name="/".join([cf.S3_DATA_BOOKING, city, cf.HOTEL_LIST_FILE]), 
                           data=booking_list, type='s3')
 
-        st.markdown('#### Finished downloading hotels and storing on S3')
+        st.markdown('<p style="color:lightgreen; font-size: 30px;"> 2. Finished downloading hotels and storing on S3: </p>', unsafe_allow_html=True)
+        st.write('snapshot of first 10 rows')
         st.write(booking_list.head(10))
         
 
@@ -156,11 +162,11 @@ class BookingScrapper():
     """    
     def get_review(self):
 
-        st.markdown('#### Start downloading reviews and storing on S3: ')
+        st.markdown('<p style="color:lightgreen; font-size: 30px;"> 4. Start downloading reviews and storing on S3: </p>', unsafe_allow_html=True)
         hotel_list = dm.read_csv_file(bucket_name=cf.S3_DATA_PATH, file_name="/".join([cf.S3_DATA_BOOKING, self.city,cf.HOTEL_LIST_FILE]), type='s3')
-        st.markdown('#### Number of hotels: ')
+        st.write('**Number of hotels**: ')
         st.write(len(hotel_list))
-        st.markdown('#### Hotel number: ')
+        st.write('**Hotel number**: ')
         hotel_num = 0
         for accommodation_id in hotel_list.hotel_id:
             hotel_num = hotel_num + 1
@@ -186,7 +192,7 @@ class BookingScrapper():
                 except:
                     st.write('error')
 
-        st.markdown('#### Finished downloading reviews and storing on S3')
+        st.write('Finished downloading reviews and storing on S3')
 
 
     """
@@ -198,7 +204,7 @@ class BookingScrapper():
         my_bucket = cf.S3_RESOURCE.Bucket(bucket_name)
         accommodation_review = []
 
-        st.markdown("#### Reading files from S3. Please wait...")
+        st.markdown('<p style="color:lightgreen; font-size: 30px;"> Reading json review files from S3 and merging them to reviews.csv file: </p>', unsafe_allow_html=True)
         #for file in all_objects['Contents']:
         for file in my_bucket.objects.filter(Prefix="/".join([cf.S3_DATA_BOOKING, city, cf.S3_BOOKING_REVIEW, ''])):
             filename = file.key
@@ -222,10 +228,11 @@ class BookingScrapper():
                           file_name="/".join([cf.S3_DATA_BOOKING, city, 'review.csv']), 
                           data=accommodation_review_df, type='s3')
 
-        st.markdown('#### Finished reading reviews from S3 ')
-        st.markdown('#### Number of reviews: ')
+        st.write('Finished reading reviews from S3 ')
+        st.markdown('<p style="color:lightgreen; font-size: 30px;"> Result: </p>', unsafe_allow_html=True)
+        st.write('**Number of reviews**: ', accommodation_review_df.shape[0])
         st.write(accommodation_review_df.shape[0])
-        st.markdown('#### Show samples of reviews: ')
+        st.write('**Show samples of reviews**: ')
         st.write(accommodation_review_df.head(20))
 
 
