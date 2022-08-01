@@ -42,8 +42,24 @@ import matplotlib.patheffects as PathEffects
 # import seaborn to make nice plots
 import seaborn as sns
 
+## for processing
+import spacy
+nlp = spacy.load('en_core_web_sm')
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.stem.wordnet import WordNetLemmatizer 
+from nltk.stem import SnowballStemmer
+from nltk.tokenize.toktok import ToktokTokenizer
+nltk.download('stopwords')
+nltk.download('punkt')
+nltk.download('wordnet')
+lst_stopwords = nltk.corpus.stopwords.words("english")
+import langdetect
+import string
+import re
 
-def utils_preprocess_text(text, flg_stemm=False, flg_lemm=False, lst_stopwords=None):
+
+def utils_preprocess_text(text, flg_stemm=False, flg_lemm=False, lst_stopwords=lst_stopwords):
     ## clean (convert to lowercase and remove punctuations and   characters and then strip)
     text = re.sub(r'[^\w\s]', '', str(text).lower().strip())
     text = re.sub('[^a-zA-Z\s]', '', text)
