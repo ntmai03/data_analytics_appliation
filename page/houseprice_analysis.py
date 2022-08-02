@@ -34,14 +34,22 @@ def app():
 
 	#============================================= PART 1: Introduction ========================================#
 	if task_option == 'Introduction':
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> Business Objective</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 1. Business Objective & Machine Learning Problem</p>', unsafe_allow_html=True)
 		st.write("Real estate agents need a software tool that helps them value homes in a specific area at the push of a button. This tool needs to output a benchmark price based on the characteristics of the house such as how many rooms the home has or how much crime there is in the area plus a whole bunch of factors. Also, agents want to see the contribution of each factor in predictive model, which features of a house are more important in determining the house price and which factors are less important in determining the house price. In other words this valuation tool needs to be tractable.")
-		
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> Defining Problem</p>', unsafe_allow_html=True)
+		st.write(" ")	
 		st.write("It is a regression problem, the analysis applies techniques like linear regression, non-linear regression to build the predictive model that allows to predict price of a given house")
+		
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 2. Techniques</p>', unsafe_allow_html=True)
 
-		st.markdown('<p style="color:lightgreen; font-size: 25px;"> Notebook</p>', unsafe_allow_html=True)
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 3. Notebook</p>', unsafe_allow_html=True)
 		st.write("More details and explanations at https://github.com/ntmai03/DataAnalysisProject/tree/main/01-Regression")
+
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 4. Demo</p>', unsafe_allow_html=True)
+		video_file = open('regression.mp4', 'rb')
+		video_bytes = video_file.read()
+		st.video(video_bytes)
+
+		st.markdown('<p style="color:lightgreen; font-size: 25px;"> 5. Conclusion</p>', unsafe_allow_html=True)
 
 
 	#=========================================== PART 2: Data Understanding ====================================#
