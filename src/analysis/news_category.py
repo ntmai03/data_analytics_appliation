@@ -356,7 +356,7 @@ class NewsCategory:
     def kmeans_analysis(self, data, n_clusters=4, save_flag=0):
 
         if(save_flag == 2):
-            kmeans = joblib.load(kmeans, cf.TRAINED_MODEL_PATH + '/news_category_kmeans.pkl')
+            kmeans = joblib.load(cf.TRAINED_MODEL_PATH + '/news_category_kmeans.pkl')
             kmeans_cluster = kmeans.predict(data)
         elif(save_flag == 0):   
             kmeans = KMeans(n_clusters=n_clusters, random_state=9, init='k-means++')
