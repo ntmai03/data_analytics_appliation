@@ -125,7 +125,7 @@ class NewsCategory:
         
         # download and train pretrained word embedding
         EMBEDDING_FILE = 'GoogleNews-vectors-negative300.bin.gz'
-        #cf.S3_CLIENT.download_file(cf.S3_DATA_PATH, "/".join([cf.S3_DATA_BOOKING, EMBEDDING_FILE]), EMBEDDING_FILE)
+        cf.S3_CLIENT.download_file(cf.S3_DATA_PATH, "/".join([cf.S3_DATA_BOOKING, EMBEDDING_FILE]), EMBEDDING_FILE)
         # Set values for various parameters
         feature_size = 300    # Word vector dimensionality  
         window_context = 30          # Context window size                                                                                    
