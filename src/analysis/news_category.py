@@ -107,29 +107,13 @@ class NewsCategory:
         self.data = df
 
     def split_data(self):
-        normalized_data = self.load_preprocessed_ds("normalized_News_Category.csv")
+        normalized_data = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + "normalized_News_Category.csv") 
         df_train, df_test = model_selection.train_test_split(normalized_data, test_size=0.1, random_state=9)
         self.df_train = df_train.reset_index(drop=True)
         self.df_test = df_test.reset_index(drop=True)
         self.y_train  = df_train[self.TARGET]
         self.y_test  = df_test[self.TARGET]
         
-
-
-    def load_preprocessed_ds(self, data_file):
-        df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + data_file)
-        return df
-
-
-    def load_tsne_data(self):
-        df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + "News_Category_tsne_data.csv")
-        self.tsne_data = df
-
-
-    def load_ae_embedding(self):
-        df = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + "News_Category_ae_embbeding.csv")
-        self.ae_embbeding = df
-
 
     def word_tokenize(self, corpus):
         wpt = nltk.WordPunctTokenizer()
@@ -221,17 +205,20 @@ class NewsCategory:
         data = df.copy()
 
         # word tokenizer
+        #self.word_tokenize()
         embeddings = pd.DataFrame(self.vectorize(data[self.TEXT_VAR], 1))
-        st.write('embedding word vectorization')
+        st.write('Embedding word vectorization')
         st.write(embeddings.head())
+        st.write("Dimensionality of data with embedded features: ")
+        st.write(embeddings.shape)
 
         # scaling data
         scaled_data = self.scaling_data(embeddings, embeddings.columns, train_flag)
-        st.write('scaled data')
+        st.write('Scaling data')
         st.write(scaled_data.head())
-
-  
+ 
         processed_data = scaled_data
+
         if(train_flag == 1):
             # transform target value from categorical data to numeric data
             y = self.transform_target(data[self.TARGET])
@@ -240,10 +227,11 @@ class NewsCategory:
             self.processed_data =  processed_data
             st.write('Storing preprocessed data in S3')
             # store embedding data to csv file
+            '''
             dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
                               file_name= cf.S3_DATA_PROCESSED_PATH + "News_Category_preprocessed.csv", 
                               data=processed_data, type='s3')
-
+            '''
         return processed_data
 
 
@@ -271,7 +259,7 @@ class NewsCategory:
 
 
     def pca_analysis(self, n_components):
-        data = self.load_preprocessed_ds('News_Category_preprocessed.csv')
+        data = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + "News_Category_preprocessed.csv")  
         self.X_train = data.drop([self.TARGET], axis=1)
         self.y_train = data[self.TARGET]
         pca = PCA(n_components=n_components)
@@ -284,7 +272,7 @@ class NewsCategory:
 
 
     def autoencoder_analysis(self, encoding1_dim=100, encoding2_dim=600, latent_dim=15):
-        data = self.load_preprocessed_ds('News_Category_preprocessed.csv')
+        data = dm.s3_load_csv(cf.S3_DATA_PATH, cf.S3_DATA_PROCESSED_PATH + "News_Category_preprocessed.csv") 
         self.X_train = data.drop([self.TARGET], axis=1)
         self.y_train = data[self.TARGET]
 
@@ -316,7 +304,7 @@ class NewsCategory:
 
         # train model
         nb_epoch = 30
-        batch_size = 10000
+        # batch_size = 10000
         autoencoder.compile(optimizer='adam', loss='mse')
         self.autoencoder = autoencoder
         self.encoder_layer = encoder_layer
@@ -357,7 +345,7 @@ class NewsCategory:
         ae_embeddings = encoder_layer.predict(data)
         self.ae_embeddings = pd.DataFrame(ae_embeddings)
 
-        st.markdown("#### AutoeEncoder Transformed data")
+        st.write("**AutoeEncoder Transformed data**")
         st.write(self.ae_embeddings.head())
 
         if(train_flag == 1):
@@ -368,7 +356,7 @@ class NewsCategory:
     def kmeans_analysis(self, data, n_clusters=4, save_flag=0):
 
         if(save_flag == 2):
-            kmeans = joblib.load('news_category_kmeans.pkl')
+            kmeans = joblib.load(kmeans, cf.TRAINED_MODEL_PATH + '/news_category_kmeans.pkl')
             kmeans_cluster = kmeans.predict(data)
         elif(save_flag == 0):   
             kmeans = KMeans(n_clusters=n_clusters, random_state=9, init='k-means++')
@@ -376,7 +364,7 @@ class NewsCategory:
         elif(save_flag == 1):
             kmeans = KMeans(n_clusters=n_clusters, random_state=9, init='k-means++')
             kmeans_cluster = kmeans.fit_predict(data)
-            joblib.dump(kmeans, 'news_category_kmeans.pkl')
+            joblib.dump(kmeans, cf.TRAINED_MODEL_PATH + '/news_category_kmeans.pkl')
         self.kmeans = kmeans
         return kmeans_cluster
 
