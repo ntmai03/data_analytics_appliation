@@ -67,7 +67,7 @@ def app():
         st.write("This function summarizes and generate a graph to depict the main patterns (key words) and their connections. This helps user to get a quick and intuitive view about main things that customers reviewed.")
         
         st.markdown('<p style="color:lightgreen; font-size: 25px;"> 4. Demo</p>', unsafe_allow_html=True)
-        video_file = open('unsupervised.mp4', 'rb')
+        video_file = open('hotel_reccomendation.mp4', 'rb')
         video_bytes = video_file.read()
         st.video(video_bytes)
 
