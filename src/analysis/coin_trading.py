@@ -237,7 +237,7 @@ class Coin_Trading:
                             data.loc[index, 'strategy'] = 'SELL'   
                             cut_loss = 1
                 elif(cut_loss == 1):
-                    if(data.loc[index,'rsi'] > 30):
+                    if(data.loc[index,'rsi'] > 40):
                         current_position = 1
                         data.loc[index, 'strategy'] = 'BUY'
                         buy_price = data.loc[index, 'price']    
@@ -272,7 +272,7 @@ class Coin_Trading:
                             data.loc[index, 'strategy'] = 'BUY'
                             buy_price = data.loc[index, 'price']                        
                 elif(cut_loss == 1):
-                    if(data.loc[index,'rsi'] > 30):
+                    if(data.loc[index,'rsi'] > 40):
                         current_position = 1
                         data.loc[index, 'strategy'] = 'BUY'
                         buy_price = data.loc[index, 'price']    
@@ -483,7 +483,7 @@ class Coin_Trading:
                         data.loc[index, 'strategy'] = 'SELL'   
                         cut_loss = 1
             elif(cut_loss == 1):
-                if(data.loc[index,'rsi'] > 30):
+                if(data.loc[index,'rsi'] > 40):
                     current_position = 1
                     data.loc[index, 'strategy'] = 'BUY'
                     buy_price = data.loc[index, 'price']    
@@ -517,7 +517,7 @@ class Coin_Trading:
                         data.loc[index, 'strategy'] = 'BUY'
                         buy_price = data.loc[index, 'price']                        
             elif(cut_loss == 1):
-                if(data.loc[index,'rsi'] > 30):
+                if(data.loc[index,'rsi'] > 40):
                     current_position = 1
                     data.loc[index, 'strategy'] = 'BUY'
                     buy_price = data.loc[index, 'price']    

@@ -129,20 +129,18 @@ class HotelRecommendation:
     def create_corpus(self, city):
 
         # read review file
-        st.markdown('#### 5 samples of reviews data')
         file_name="/".join([cf.S3_DATA_BOOKING, city, 'review.csv'])
         review_df = dm.read_csv_file(bucket_name=cf.S3_DATA_PATH, file_name=file_name, type='s3')
-        st.write(review_df[['accommodation_id', 'review']].head())
  
-        # detect language
-        st.markdown('#### Detect language and select English reviews')
+        # Language Detection
+        st.markdown('<p style="color:green; font-size: 18px;"> Language Detection </p>', unsafe_allow_html=True)
         review_df["text_clean"] = review_df["review"].apply(lambda x: utils_preprocess_text(x, flg_stemm=True, flg_lemm=True, lst_stopwords=lst_stopwords))
         review_df['lang'] = review_df["text_clean"].apply(lambda x: langdetect.detect(x) if x.strip() != "" else "")
         review_df = review_df[review_df["lang"]=="en"]
-        st.write(review_df[['accommodation_id', 'review', 'text_clean', 'lang']].head())
+        st.write(review_df[['accommodation_id', 'review', 'lang']].head())
 
         # Split review to sentences & clauses and preprocessing 
-        st.markdown('#### Creating corpus - Split review to sentences and clauses')
+        st.markdown('<p style="color:green; font-size: 18px;"> Creating corpus - Split review to sentences and clauses </p>', unsafe_allow_html=True)
         sentences = []
         clause_clean = []
         listing_ids = []
@@ -153,7 +151,7 @@ class HotelRecommendation:
         st.write("Number of reviews: ", str(len(review_df)))
         for i in range(0, len(review_df.review)):
             if (i % 500 == 0):
-                st.write('processing review number: ' + str(i))
+                st.write('processing review number: ' + str(i) + ' to ' + str(i + 500))
             doc = nlp(review_df.review.iloc[i])
             listing_id = review_df.accommodation_id.iloc[i]
             for sent in doc.sents:
@@ -187,13 +185,15 @@ class HotelRecommendation:
         # select clauses with number of words > 7 => to reduce noise and unclear info
         clause_df = clause_df[clause_df['word_count'] > 7]
         clause_df = clause_df.reset_index(drop=True)
-        st.markdown('#### Finish splitting reviews to clauses')
-        st.write("Number of clauses: ", clause_df.shape)
-        st.write("Examples of first 10 clauses")
+        
+        st.markdown('<p style="color:green; font-size: 18px;"> Finish splitting reviews to clauses </p>', unsafe_allow_html=True)
+        st.write("**Number of clauses**: ", clause_df.shape)
+        st.write("**Examples of first 10 clauses**")
         st.write(clause_df.head(10))
 
         # store corpus to csv file
-        st.markdown('#### Storing corpus to S3')
+        st.markdown('<p style="color:green; font-size: 18px;"> Storing data in S3 </p>', unsafe_allow_html=True)
+
         dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
                           file_name="/".join([cf.S3_DATA_BOOKING, city, 'corpus_df.csv']), 
                           data=corpus_df, type='s3')
@@ -201,7 +201,7 @@ class HotelRecommendation:
         dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
                           file_name="/".join([cf.S3_DATA_BOOKING, city, 'clause_df.csv']), 
                           data=clause_df, type='s3')
-        st.markdown('#### Finished storing corpus')
+        st.write("**Finished storing data in S3**")
 
 
     def create_clause(self, sent):
@@ -234,15 +234,13 @@ class HotelRecommendation:
         min_word_count = 1   # Minimum word count                        
         sample = 1e-3   # Downsample setting for frequent words
 
-        st.markdown('#### Transforming text to numeric features using word embedding technique')
-
+        st.markdown('<p style="color:green; font-size: 18px;"> Train Word2Vec model to transform text to numeric feature </p>', unsafe_allow_html=True)
         # creating embedding data
         tokenized_corpus = []
         corpus_df['text_clean'] = corpus_df['text_clean'].astype(str)
         for words in corpus_df['text_clean']:
             words = str(words)
             tokenized_corpus.append(words.split())
-
         # download and train pretrained word embedding
         EMBEDDING_FILE = 'GoogleNews-vectors-negative300.bin.gz'
         cf.S3_CLIENT.download_file(cf.S3_DATA_PATH, "/".join([cf.S3_DATA_BOOKING, EMBEDDING_FILE]), EMBEDDING_FILE)
@@ -250,33 +248,36 @@ class HotelRecommendation:
         pretrained_model.build_vocab(tokenized_corpus)
         pretrained_model.intersect_word2vec_format(EMBEDDING_FILE, lockf=1.0, binary = True)
         pretrained_model.train(tokenized_corpus, total_examples=pretrained_model.corpus_count, epochs = 5)
-        
         # cf.S3_CLIENT.download_file(cf.S3_DATA_PATH, "/".join([cf.S3_DATA_BOOKING, 'booking_pretrained_model.pkl']), 'booking_pretrained_model.pkl')
         #pretrained_model = joblib.load('booking_pretrained_model.pkl')
         #pretrained_model.train(tokenized_corpus, total_examples=pretrained_model.corpus_count, epochs = 5)       
-        # store pretrained word embedding
-        joblib.dump(pretrained_model, city + '_booking_pretrained_model.pkl')
 
+        # store pretrained word embedding
+        st.markdown('<p style="color:green; font-size: 18px;"> Finished training</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:green; font-size: 18px;"> Storing model in S3</p>', unsafe_allow_html=True)
+        joblib.dump(pretrained_model, city + '_booking_pretrained_model.pkl')
 
         # train model
         embeddings =  self.vectorize(corpus_df['text_clean'], pretrained_model)
         embeddings_df = pd.DataFrame(embeddings)
-        st.markdown('#### Review embedding word vectors')
+        st.write("**Review embedding word vectors**")
         st.write(embeddings_df.head()) 
         st.write(embeddings_df.shape)     
 
         # scaling data for model training
+        st.markdown('<p style="color:green; font-size: 18px;"> Scaling data </p>', unsafe_allow_html=True)
         scaler = MinMaxScaler()
         embeddings_df = pd.DataFrame(scaler.fit_transform(embeddings_df), columns = range(0,300))
-        st.markdown('#### Review scaled embedding word vectors')
+        st.write("**Review scaled data **")        
         st.write(embeddings_df.head()) 
         joblib.dump(scaler, hotel_rec_scaler)
 
         # store embedding data to csv file
-        st.markdown('#### Storing data to S3')
+        st.markdown('<p style="color:green; font-size: 18px;"> Storing data in S3</p>', unsafe_allow_html=True)
         dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
                           file_name="/".join([cf.S3_DATA_BOOKING, city, 'embeddings_df.csv']), 
                           data=embeddings_df, type='s3')
+        st.write("**Finished storing data **")  
         
 
 
@@ -285,7 +286,7 @@ class HotelRecommendation:
     ##############################################################################################
     def text_processing(self, city):
         # create corpus
-        st.markdown('<p style="color:lightgreen; font-size: 30px;"> Text Processing and Normalization</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:lightgreen; font-size: 30px;"> 1. Text Normalization</p>', unsafe_allow_html=True)
         self.create_corpus(city)
         file_name="/".join([cf.S3_DATA_BOOKING, city, 'clause_df.csv'])
         clause_df = dm.read_csv_file(bucket_name=cf.S3_DATA_PATH, file_name=file_name, type='s3')
@@ -293,7 +294,7 @@ class HotelRecommendation:
         st.write(clause_df.head(10))
             
         # create word embedding
-        st.markdown('<p style="color:lightgreen; font-size: 30px;"> Feature Extraction - Word Embedding</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:lightgreen; font-size: 30px;"> 2. Feature Extraction - Word Embedding</p>', unsafe_allow_html=True)
         self.create_word_embedding(city, clause_df)
 
 
@@ -382,7 +383,8 @@ class HotelRecommendation:
 
     def kmeans_topic_modeling(self, city, ae_embeddings, n_clusters=8):
 
-        st.markdown('#### Training clustering using KMeans')
+        st.markdown('<p style="color:green; font-size: 18px;"> Training clustering using KMeans</p>', unsafe_allow_html=True)
+
         kmeans = KMeans(n_clusters=n_clusters, random_state=9)
         kmeans.fit(ae_embeddings)
         cluster_labels = kmeans.labels_
@@ -390,7 +392,7 @@ class HotelRecommendation:
         cluster_df['Cluster'] = cluster_labels
         ae_embeddings['Cluster'] = cluster_labels
 
-        st.markdown('<p style="color:lightgreen; font-size: 30px;"> Applying TSNE and plot data with cluster</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:green; font-size: 18px;"> Applying TSNE and plot data with cluster</p>', unsafe_allow_html=True)
         tsne = TSNE(n_components=2, random_state=9)
         if(len(ae_embeddings) > 30000):
             tsne_sample = ae_embeddings.sample(n=30000, random_state=1)
@@ -402,14 +404,14 @@ class HotelRecommendation:
         X_train_tsne['Cluster'] =  tsne_sample['Cluster']
         plot_cluster(X_train_tsne[[0,1]].values, X_train_tsne['Cluster'], n_clusters)
 
-        st.markdown('<p style="color:lightgreen; font-size: 30px;"> Review 20 clauses in each cluster</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:green; font-size: 18px;"> Review 20 clauses in each cluster</p>', unsafe_allow_html=True)
         file_name = "/".join([cf.S3_DATA_BOOKING, city, 'clause_df.csv'])
         clause_df = dm.read_csv_file(cf.S3_DATA_PATH, file_name, type='s3')
         clause_df = clause_df.reset_index(drop=True)
         clause_df['Cluster'] = cluster_df['Cluster']
         self.show_cluster(clause_df, n_clusters)
         
-        st.markdown('<p style="color:lightgreen; font-size: 30px;"> Storing auto encoder embedding data and cluster data to S3</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:green; font-size: 18px;"> Storing auto data in S3</p>', unsafe_allow_html=True)
         # store embedding data to csv file
         dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
                           file_name="/".join([cf.S3_DATA_BOOKING, city, 'booking_cluster_df.csv']), 
@@ -417,6 +419,12 @@ class HotelRecommendation:
         dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
                           file_name="/".join([cf.S3_DATA_BOOKING, city, 'booking_ae_embedding_df.csv']), 
                           data=ae_embeddings, type='s3')
+        '''
+        dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
+                          file_name="/".join([cf.S3_DATA_BOOKING, city, 'booking_tsne_embedding_df.csv']), 
+                          data=X_train_tsne, type='s3')
+        '''
+        st.markdown('<p style="color:green; font-size: 18px;"> Finished storing data</p>', unsafe_allow_html=True)
         
 
 
@@ -441,7 +449,7 @@ class HotelRecommendation:
     def show_cluster(self, corpus_cluster_df, n_clusters):
         n_records = 10
         for i in range(0, n_clusters):          
-            st.write("**Cluster number**: ", str(i))
+            st.write("#### Cluster number: ", str(i))
             for j in range(0, n_records):
                 st.write(corpus_cluster_df[(corpus_cluster_df.Cluster == i)].text.iloc[j])
                 st.write()
@@ -458,6 +466,26 @@ class HotelRecommendation:
         buf = BytesIO()
         fig.savefig(buf, format="png")
         st.image(buf)
+
+
+    def pretrained_model_result(self, city):
+        # read word embedding data
+
+        # load embedding with cluserting
+        st.markdown('<p style="color:lightgreen; font-size: 30px;"> Plot cluster</p>', unsafe_allow_html=True)
+        file_name = "/".join([cf.S3_DATA_BOOKING, city, 'booking_tsne_embedding_df.csv'])
+        X_train_tsne = dm.read_csv_file(cf.S3_DATA_PATH, file_name, type='s3')     
+        plot_cluster(X_train_tsne[['0','1']].values, X_train_tsne['Cluster'], 8)
+
+        # load embedding with cluserting
+        st.markdown('<p style="color:lightgreen; font-size: 30px;"> Review 20 clauses in each cluster</p>', unsafe_allow_html=True)
+        file_name = "/".join([cf.S3_DATA_BOOKING, city, 'booking_cluster_df.csv'])
+        df = dm.read_csv_file(cf.S3_DATA_PATH, file_name, type='s3')
+        df = df.reset_index(drop=True)
+        df['Cluster'] = df['Cluster']
+        n_clusters = df.Cluster.nunique()
+        self.show_cluster(df, n_clusters)
+       
 
 
     ##############################################################################################
@@ -558,16 +586,15 @@ class HotelRecommendation:
         search_string4, cluster_df4 = self.search_corpus(city, search_string4, corpus_df)
         search_string5, cluster_df5 = self.search_corpus(city, search_string5, corpus_df)
 
-        st.write(len(cluster_df1), len(cluster_df2), len(cluster_df3), len(cluster_df4), len(cluster_df5))
-
+        st.markdown('<p style="color:lightgreen; font-size: 30px;"> Best match for each condition: </p>', unsafe_allow_html=True)
         vectorizer = CountVectorizer(max_features=10000, ngram_range=(1,1), lowercase=False, binary='true')
+        
         # calculate similarity of each condition
-        st.markdown('<p style="color:Green; font-size: 30px;"> Best match for each condition: </p>', unsafe_allow_html=True)
         cluster_df1['score1'] = self.calculate_similarity(search_string1, vectorizer, cluster_df1)
         cluster_df1 = cluster_df1.sort_values(['score1'], ascending=False).reset_index(drop=True)
         sim_df1 = cluster_df1.groupby(['listing_id']).score1.max()
         sim_df1 = pd.DataFrame(sim_df1).reset_index(drop=False)
-        st.write('condition 1')
+        st.markdown('<p style="color:green; font-size: 18px;"> Condition 1 </p>', unsafe_allow_html=True)
         for j in range(0, 3):
             st.write(j, cluster_df1.text[j], cluster_df1.score1[j])
 
@@ -575,7 +602,7 @@ class HotelRecommendation:
         cluster_df2 = cluster_df2.sort_values(['score2'], ascending=False).reset_index(drop=True)
         sim_df2 = cluster_df2.groupby(['listing_id']).score2.max()
         sim_df2 = pd.DataFrame(sim_df2).reset_index(drop=False)
-        st.write('condition 2')
+        st.markdown('<p style="color:green; font-size: 18px;"> Condition 2 </p>', unsafe_allow_html=True)
         for j in range(0, 3):
             st.write(j, cluster_df2.text[j], cluster_df2.score2[j])
 
@@ -583,7 +610,7 @@ class HotelRecommendation:
         cluster_df3 = cluster_df3.sort_values(['score3'], ascending=False).reset_index(drop=True)
         sim_df3 = cluster_df3.groupby(['listing_id']).score3.max()
         sim_df3 = pd.DataFrame(sim_df3).reset_index(drop=False)
-        st.write('condition 3')
+        st.markdown('<p style="color:green; font-size: 18px;"> Condition 3 </p>', unsafe_allow_html=True)
         for j in range(0, 3):
             st.write(j, cluster_df3.text[j], cluster_df3.score3[j])
 
@@ -591,7 +618,7 @@ class HotelRecommendation:
         cluster_df4 = cluster_df4.sort_values(['score4'], ascending=False).reset_index(drop=True)
         sim_df4 = cluster_df4.groupby(['listing_id']).score4.max()
         sim_df4 = pd.DataFrame(sim_df4).reset_index(drop=False) 
-        st.write('condition 4')
+        st.markdown('<p style="color:green; font-size: 18px;"> Condition 4 </p>', unsafe_allow_html=True)
         for j in range(0, 3): 
             st.write(j, cluster_df4.text[j], cluster_df4.score4[j]) 
 
@@ -599,11 +626,11 @@ class HotelRecommendation:
         cluster_df5 = cluster_df5.sort_values(['score5'], ascending=False).reset_index(drop=True)
         sim_df5 = cluster_df5.groupby(['listing_id']).score5.max()
         sim_df5 = pd.DataFrame(sim_df5).reset_index(drop=False)
-        st.write('condition 5')
+        st.markdown('<p style="color:green; font-size: 18px;"> Condition 5 </p>', unsafe_allow_html=True)
         for j in range(0, 3): 
             st.write(j, cluster_df5.text[j], cluster_df5.score5[j])
 
-
+        # Merge result
         result_df = pd.DataFrame(corpus_df['listing_id'].unique(), columns =['listing_id'])
         result_df = result_df.merge(sim_df1[['listing_id', 'score1']],how='left', on='listing_id')
         result_df = result_df.merge(sim_df2[['listing_id', 'score2']],how='left', on='listing_id')
@@ -620,14 +647,13 @@ class HotelRecommendation:
         result_df['avg_score'] = result_df[['score1','score2','score3','score4','score5']].mean(axis=1)
         result_df = result_df.sort_values('avg_score', ascending=False)
 
-        st.write('The hotel best match: ')
+        st.markdown('<p style="color:green; font-size: 18px;"> The hotel best match </p>', unsafe_allow_html=True)
         listing_id = result_df.listing_id.iloc[0]
         st.write(cluster_df1.loc[cluster_df1.listing_id == listing_id].text.iloc[0])
         st.write(cluster_df2.loc[cluster_df2.listing_id == listing_id].text.iloc[0])
         st.write(cluster_df3.loc[cluster_df3.listing_id == listing_id].text.iloc[0])
         st.write(cluster_df4.loc[cluster_df4.listing_id == listing_id].text.iloc[0])
         st.write(cluster_df5.loc[cluster_df5.listing_id == listing_id].text.iloc[0])
-
 
         return result_df
 
@@ -636,8 +662,6 @@ class HotelRecommendation:
     ##############################################################################################
     # Knowledge Graph
     ##############################################################################################
-
-
     def extract_pattern(self, doc):
         
         obj_list = []
