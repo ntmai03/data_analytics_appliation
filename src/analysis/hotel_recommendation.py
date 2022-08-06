@@ -853,7 +853,7 @@ class HotelRecommendation:
 
         node_color = {'NOUN':'lightblue', 'PRON':'lightblue', 'PROPN':'yellow', 'VERB': 'red', 'ADJ':'red', 
                       'ADV':'red', 'DET':'red', 'X':'grey', 'INTJ':'grey','AUX':'grey','NUM':'grey',
-                      'ADP':'grey','PUNCT':'grey', 'SCONJ':'grey'}
+                      'ADP':'grey','PUNCT':'grey', 'SCONJ':'grey', 'SYM':'grey'}
 
         node_list = []
         for i in range(0, len(net_repulsion.nodes)):
