@@ -87,7 +87,8 @@ class BookingScrapper():
 
             return dest_id, nr_hotels
         except:
-            pass
+            st.write("The demo account has exceeded the MONTHLY quota for Requests to Rapid API")
+
 
         
 
@@ -198,16 +199,16 @@ class BookingScrapper():
     """
     Collect all reviews into one file
     """   
-    def create_review_file(self, city):
+    def merge_review_data(self, city):
         self.city = city
         bucket_name = cf.S3_DATA_PATH
         my_bucket = cf.S3_RESOURCE.Bucket(bucket_name)
         accommodation_review = []
 
-        st.markdown('<p style="color:lightgreen; font-size: 30px;"> Reading json review files from S3 and merging them to reviews.csv file: </p>', unsafe_allow_html=True)
-        #for file in all_objects['Contents']:
+        st.markdown('<p style="color:lightgreen; font-size: 30px;"> 1. Merging json reviews files to reviews.csv file </p>', unsafe_allow_html=True)
         for file in my_bucket.objects.filter(Prefix="/".join([cf.S3_DATA_BOOKING, city, cf.S3_BOOKING_REVIEW, ''])):
             filename = file.key
+            st.write(filename)
             response = cf.S3_CLIENT.get_object(Bucket=bucket_name, Key=filename)
             reviews_data = json.loads(response.get("Body").read())
             accommodation_id = reviews_data['accommodation_id'] 
@@ -223,15 +224,17 @@ class BookingScrapper():
                     accommodation_review.append([accommodation_id, pros, cons, review])
             except:
                 pass
+
         accommodation_review_df = pd.DataFrame(accommodation_review, columns = ['accommodation_id', 'pros', 'cons', 'review'])
+        st.markdown('<p style="color:green; font-size: 18px;"> Storing reviews.csv on S3</p>', unsafe_allow_html=True)
+
         dm.write_csv_file(bucket_name=cf.S3_DATA_PATH, 
                           file_name="/".join([cf.S3_DATA_BOOKING, city, 'review.csv']), 
                           data=accommodation_review_df, type='s3')
 
-        st.write('Finished reading reviews from S3 ')
-        st.markdown('<p style="color:lightgreen; font-size: 30px;"> Result: </p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:green; font-size: 18px;"> Finished merging and storing reviews.csv file</p>', unsafe_allow_html=True)
+        st.markdown('<p style="color:lightgreen; font-size: 30px;"> 2. Result </p>', unsafe_allow_html=True)
         st.write('**Number of reviews**: ', accommodation_review_df.shape[0])
-        st.write(accommodation_review_df.shape[0])
         st.write('**Show samples of reviews**: ')
         st.write(accommodation_review_df.head(20))
 
