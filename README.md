@@ -1,3 +1,5 @@
+Link to app: https://ntmai03-data-analytics-appliation-app-phgwee.streamlitapp.com/
+
 Step to run application:
 
 Step 1:	Create the copy of the project.
