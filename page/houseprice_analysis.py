@@ -148,7 +148,7 @@ def app():
 			regu.analyze_continuous_var(df_train[var], df_train[target])
 		st.write("**1. Check normality: **")
 		st.write("It can be seen from histograms that variables sqft_living, sqft_lot, sqft_above, sqft_basement, sqft_living15, sqft_lot15 are heavily skewed")
-		st.write("In Q-Q plot, many of the observations lie on the 45 degree red line following the expected quantiles of the theoretical Gaussian distribution. Some observations at the lower and upper end of the value range depart from the red line, which indicates that the variables are not normally distributed")
+		st.write("In Q-Q plot, many observations at the lower and upper end of the value range depart from the red line, which indicates that the variables are not normally distributed")
 		st.write('')
 		st.write("**2. Check outliers**:")
 		st.write("From the Boxplot: it can be seen that there exist outlilers in many variables: sqft_lot15, sqft_living, sqft_lot")
